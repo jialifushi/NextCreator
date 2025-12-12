@@ -1,0 +1,211 @@
+import type { Node, Edge } from "@xyflow/react";
+
+// 模型类型（图片生成）
+export type ModelType = "gemini-2.5-flash-image" | "gemini-3-pro-image-preview";
+
+// 视频模型类型
+export type VideoModelType = "sora-2";
+
+// LLM 模型类型（支持自定义模型名称）
+export type LLMModelType = string;
+
+// 视频生成参数
+export interface VideoGenerationParams {
+  prompt: string;
+  model: VideoModelType;
+  seconds?: "5" | "10" | "15" | "20";
+  inputImage?: string; // base64 编码的参考图片
+}
+
+// 视频任务状态响应
+export interface VideoTaskResponse {
+  id: string;
+  object: string;
+  model: string;
+  status: "queued" | "in_progress" | "completed" | "failed";
+  progress: number;
+  created_at: number;
+  seconds: string;
+  completed_at?: number;
+  expires_at?: number;
+  size?: string;
+  error?: {
+    code: string;
+    message: string;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+// 视频生成响应
+export interface VideoGenerationResponse {
+  taskId?: string;
+  videoUrl?: string;
+  videoData?: string; // base64 编码的视频数据
+  status?: VideoTaskResponse["status"];
+  progress?: number;
+  error?: string;
+}
+
+// 图片生成参数
+export interface ImageGenerationParams {
+  prompt: string;
+  model: ModelType;
+  aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "5:4" | "4:5" | "21:9";
+  imageSize?: "1K" | "2K" | "4K";
+  responseModalities?: ("TEXT" | "IMAGE")[];
+}
+
+// 图片编辑参数
+export interface ImageEditParams extends ImageGenerationParams {
+  inputImages?: string[]; // base64 编码的图片数组（支持多图输入）
+}
+
+// API 响应
+export interface GenerationResponse {
+  imageData?: string; // base64 编码的图片数据
+  text?: string;
+  error?: string;
+}
+
+// 节点数据类型 - 添加索引签名以满足 React Flow 的 Record<string, unknown> 约束
+export interface PromptNodeData {
+  [key: string]: unknown;
+  label: string;
+  prompt: string;
+}
+
+export interface ImageGeneratorNodeData {
+  [key: string]: unknown;
+  label: string;
+  model: ModelType;
+  aspectRatio: ImageGenerationParams["aspectRatio"];
+  imageSize: ImageGenerationParams["imageSize"];
+  status: "idle" | "loading" | "success" | "error";
+  outputImage?: string;     // 仍保留 base64 用于向后兼容
+  outputImagePath?: string; // 新增：文件系统路径
+  error?: string;
+}
+
+export interface ImageInputNodeData {
+  [key: string]: unknown;
+  label: string;
+  imageData?: string;
+  fileName?: string;
+  imagePath?: string;
+}
+
+export interface TextOutputNodeData {
+  [key: string]: unknown;
+  label: string;
+  text?: string;
+}
+
+export interface VideoGeneratorNodeData {
+  [key: string]: unknown;
+  label: string;
+  model: VideoModelType;
+  seconds: VideoGenerationParams["seconds"];
+  status: "idle" | "loading" | "success" | "error";
+  taskId?: string;
+  taskStage?: "queued" | "in_progress" | "completed" | "failed"; // 任务阶段
+  progress?: number;
+  outputVideo?: string; // 视频 URL
+  error?: string;
+}
+
+// LLM 内容生成节点数据
+export interface LLMContentNodeData {
+  [key: string]: unknown;
+  label: string;
+  model: LLMModelType;
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  status: "idle" | "loading" | "success" | "error";
+  outputContent?: string;
+  error?: string;
+}
+
+// 文件上传节点数据
+export interface FileUploadNodeData {
+  [key: string]: unknown;
+  label: string;
+  fileData?: string;      // base64 编码的文件内容
+  fileName?: string;      // 文件名
+  mimeType?: string;      // MIME 类型
+  fileSize?: number;      // 文件大小（字节）
+}
+
+// PPT 内容节点相关类型（从 PPTContentNode/types.ts 重新导出）
+export type { PPTOutline, PPTPageStatus, PPTPageItem, PPTContentNodeData } from "@/components/nodes/PPTContentNode/types";
+
+// PPT 组装节点相关类型（从 PPTAssemblerNode/types.ts 重新导出）
+export type { PPTPageData, PPTAssemblerNodeData } from "@/components/nodes/PPTAssemblerNode/types";
+
+// 节点类型联合
+export type CustomNodeData =
+  | PromptNodeData
+  | ImageGeneratorNodeData
+  | ImageInputNodeData
+  | TextOutputNodeData
+  | VideoGeneratorNodeData
+  | LLMContentNodeData
+  | FileUploadNodeData;
+
+// 自定义节点类型
+export type CustomNode = Node<CustomNodeData>;
+export type CustomEdge = Edge;
+
+// 节点分类定义
+export interface NodeCategory {
+  id: string;
+  name: string;
+  icon: string;
+  nodes: NodeDefinition[];
+}
+
+export interface NodeDefinition {
+  type: string;
+  label: string;
+  description: string;
+  icon: string;
+  defaultData: Record<string, unknown>;
+  inputs?: string[];
+  outputs?: string[];
+}
+
+// 供应商配置
+export interface Provider {
+  id: string;           // 唯一标识 (uuid)
+  name: string;         // 供应商名称
+  apiKey: string;       // API Key
+  baseUrl: string;      // Base URL
+}
+
+// 节点类型到供应商的映射
+export interface NodeProviderMapping {
+  imageGeneratorPro?: string;   // Pro 图片节点使用的供应商 ID
+  imageGeneratorFast?: string;  // Fast 图片节点使用的供应商 ID
+  videoGenerator?: string;      // 视频节点使用的供应商 ID
+  llm?: string;                 // PPT 内容生成节点使用的 LLM 供应商 ID
+  llmContent?: string;          // LLM 内容生成节点使用的供应商 ID
+}
+
+// 应用设置
+export interface AppSettings {
+  providers: Provider[];              // 供应商列表
+  nodeProviders: NodeProviderMapping; // 节点类型 -> 供应商映射
+  theme: "light" | "dark" | "system";
+}
+
+// Store 状态
+export interface FlowState {
+  nodes: CustomNode[];
+  edges: CustomEdge[];
+  selectedNodeId: string | null;
+}
+
+export interface SettingsState {
+  settings: AppSettings;
+  isSettingsOpen: boolean;
+}

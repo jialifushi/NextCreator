@@ -1,0 +1,384 @@
+import { memo, useCallback, useState, useRef } from "react";
+import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
+import { Sparkles, Zap, Play, AlertCircle, Maximize2 } from "lucide-react";
+import { useFlowStore } from "@/stores/flowStore";
+import { useCanvasStore } from "@/stores/canvasStore";
+import { generateImage, editImage } from "@/services/imageService";
+import { saveImage, getImageUrl, isTauriEnvironment } from "@/services/fileStorageService";
+import { ImagePreviewModal } from "@/components/ui/ImagePreviewModal";
+import { useLoadingDots } from "@/hooks/useLoadingDots";
+import type { ImageGeneratorNodeData, ModelType } from "@/types";
+
+// 定义节点类型
+type ImageGeneratorNode = Node<ImageGeneratorNodeData>;
+
+// 基础宽高比选项（NanoBanana 使用）
+const basicAspectRatioOptions = [
+  { value: "1:1", label: "1:1" },
+  { value: "16:9", label: "16:9" },
+  { value: "9:16", label: "9:16" },
+  { value: "4:3", label: "4:3" },
+  { value: "3:4", label: "3:4" },
+];
+
+// Pro 宽高比选项（NanoBanana Pro 使用，支持更多比例）
+const proAspectRatioOptions = [
+  { value: "1:1", label: "1:1" },
+  { value: "16:9", label: "16:9" },
+  { value: "9:16", label: "9:16" },
+  { value: "4:3", label: "4:3" },
+  { value: "3:4", label: "3:4" },
+  { value: "3:2", label: "3:2" },
+  { value: "2:3", label: "2:3" },
+  { value: "5:4", label: "5:4" },
+  { value: "4:5", label: "4:5" },
+  { value: "21:9", label: "21:9" },
+];
+
+const imageSizeOptions = [
+  { value: "1K", label: "1K" },
+  { value: "2K", label: "2K" },
+  { value: "4K", label: "4K" },
+];
+
+// 通用图片生成器节点组件
+function ImageGeneratorBase({
+  id,
+  data,
+  selected,
+  isPro,
+}: NodeProps<ImageGeneratorNode> & { isPro: boolean }) {
+  const { updateNodeData, getConnectedInputData } = useFlowStore();
+  const [showPreview, setShowPreview] = useState(false);
+
+  // 省略号加载动画
+  const dots = useLoadingDots(data.status === "loading");
+
+  // 保存生成时的画布 ID，用于确保结果更新到正确的画布
+  const canvasIdRef = useRef<string | null>(null);
+
+  const model: ModelType = isPro ? "gemini-3-pro-image-preview" : "gemini-2.5-flash-image";
+
+  /**
+   * 更新节点数据，同时更新 canvasStore 确保画布切换后数据正确
+   */
+  const updateNodeDataWithCanvas = useCallback((nodeId: string, nodeData: Partial<ImageGeneratorNodeData>) => {
+    const { activeCanvasId } = useCanvasStore.getState();
+    const targetCanvasId = canvasIdRef.current;
+
+    // 始终更新 flowStore（当前活跃画布的数据）
+    updateNodeData<ImageGeneratorNodeData>(nodeId, nodeData);
+
+    // 如果目标画布不是当前活跃画布，也需要更新 canvasStore
+    if (targetCanvasId && targetCanvasId !== activeCanvasId) {
+      const canvasStore = useCanvasStore.getState();
+      const canvas = canvasStore.canvases.find(c => c.id === targetCanvasId);
+
+      if (canvas) {
+        const updatedNodes = canvas.nodes.map(node => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: { ...node.data, ...nodeData },
+            };
+          }
+          return node;
+        });
+
+        useCanvasStore.setState(state => ({
+          canvases: state.canvases.map(c =>
+            c.id === targetCanvasId
+              ? { ...c, nodes: updatedNodes, updatedAt: Date.now() }
+              : c
+          ),
+        }));
+      }
+    }
+  }, [updateNodeData]);
+
+  const handleGenerate = useCallback(async () => {
+    const { prompt, images } = getConnectedInputData(id);
+    const { activeCanvasId } = useCanvasStore.getState();
+
+    // 记录当前画布 ID
+    canvasIdRef.current = activeCanvasId;
+
+    if (!prompt) {
+      updateNodeDataWithCanvas(id, {
+        status: "error",
+        error: "请连接提示词节点",
+      });
+      return;
+    }
+
+    updateNodeDataWithCanvas(id, {
+      status: "loading",
+      error: undefined,
+    });
+
+    try {
+      // 根据 isPro 确定节点类型
+      const nodeType = isPro ? "imageGeneratorPro" : "imageGeneratorFast";
+
+      const response = images.length > 0
+        ? await editImage({
+            prompt,
+            model,
+            inputImages: images,
+            aspectRatio: data.aspectRatio,
+            imageSize: isPro ? data.imageSize : undefined,
+          }, nodeType)
+        : await generateImage({
+            prompt,
+            model,
+            aspectRatio: data.aspectRatio,
+            imageSize: isPro ? data.imageSize : undefined,
+          }, nodeType);
+
+      if (response.imageData) {
+        // 在 Tauri 环境中，将图片保存到文件系统
+        if (isTauriEnvironment() && activeCanvasId) {
+          try {
+            const imageInfo = await saveImage(
+              response.imageData,
+              activeCanvasId,
+              id
+            );
+            // 保存文件路径和 base64（base64 用于节点间数据传递）
+            // 注意：IndexedDB 持久化时可以选择只存储路径
+            updateNodeDataWithCanvas(id, {
+              status: "success",
+              outputImage: response.imageData, // 保留用于节点间传递
+              outputImagePath: imageInfo.path,
+              error: undefined,
+            });
+          } catch (saveError) {
+            // 如果文件保存失败，回退到仅 base64 存储
+            console.warn("文件保存失败，回退到 base64 存储:", saveError);
+            updateNodeDataWithCanvas(id, {
+              status: "success",
+              outputImage: response.imageData,
+              outputImagePath: undefined,
+              error: undefined,
+            });
+          }
+        } else {
+          // 非 Tauri 环境或没有画布 ID，使用 base64 存储
+          updateNodeDataWithCanvas(id, {
+            status: "success",
+            outputImage: response.imageData,
+            outputImagePath: undefined,
+            error: undefined,
+          });
+        }
+      } else if (response.error) {
+        updateNodeDataWithCanvas(id, {
+          status: "error",
+          error: response.error,
+        });
+      } else {
+        updateNodeDataWithCanvas(id, {
+          status: "error",
+          error: "未返回图片数据",
+        });
+      }
+    } catch {
+      updateNodeDataWithCanvas(id, {
+        status: "error",
+        error: "生成失败",
+      });
+    }
+  }, [id, model, data.aspectRatio, data.imageSize, isPro, updateNodeDataWithCanvas, getConnectedInputData]);
+
+  // 节点样式配置
+  const headerGradient = isPro
+    ? "bg-gradient-to-r from-purple-500 to-pink-500"
+    : "bg-gradient-to-r from-amber-500 to-orange-500";
+  const outputHandleColor = isPro ? "!bg-pink-500" : "!bg-orange-500";
+
+  return (
+    <>
+      <div
+        className={`
+          w-[220px] rounded-xl bg-base-100 shadow-lg border-2 transition-all
+          ${selected ? "border-primary shadow-primary/20" : "border-base-300"}
+        `}
+      >
+        {/* 输入端口 - prompt 类型（上方） */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="input-prompt"
+          style={{ top: "30%" }}
+          className={`!w-3 !h-3 !bg-blue-500 !border-2 !border-white`}
+        />
+        {/* 输入端口 - image 类型（下方） */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="input-image"
+          style={{ top: "70%" }}
+          className={`!w-3 !h-3 !bg-green-500 !border-2 !border-white`}
+        />
+
+        {/* 节点头部 */}
+        <div className={`flex items-center justify-between px-3 py-2 ${headerGradient} rounded-t-lg`}>
+          <div className="flex items-center gap-2">
+            {isPro ? (
+              <Sparkles className="w-4 h-4 text-white" />
+            ) : (
+              <Zap className="w-4 h-4 text-white" />
+            )}
+            <span className="text-sm font-medium text-white">{data.label}</span>
+          </div>
+          {isPro && (
+            <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">PRO</span>
+          )}
+        </div>
+
+        {/* 节点内容 */}
+        <div className="p-2 space-y-2 nodrag">
+          {/* 配置选项 */}
+          <div className="space-y-1.5">
+            <div>
+              <label className="text-xs text-base-content/60 mb-0.5 block">宽高比</label>
+              <div className="grid grid-cols-5 gap-1">
+                {(isPro ? proAspectRatioOptions : basicAspectRatioOptions).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`
+                      btn btn-xs px-0
+                      ${ (data.aspectRatio || "1:1") === opt.value
+                        ? (isPro ? "btn-primary" : "btn-warning")
+                        : "btn-ghost bg-base-200"
+                      }
+                    `}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateNodeData<ImageGeneratorNodeData>(id, {
+                        aspectRatio: opt.value as ImageGeneratorNodeData["aspectRatio"],
+                      });
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {isPro && (
+              <div>
+                <label className="text-xs text-base-content/60 mb-0.5 block">分辨率</label>
+                <div className="grid grid-cols-3 gap-1">
+                  {imageSizeOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`
+                        btn btn-xs
+                        ${ (data.imageSize || "1K") === opt.value
+                          ? "btn-primary"
+                          : "btn-ghost bg-base-200"
+                        }
+                      `}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateNodeData<ImageGeneratorNodeData>(id, {
+                          imageSize: opt.value as ImageGeneratorNodeData["imageSize"],
+                        });
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 生成按钮 */}
+          <button
+            className={`btn btn-sm w-full gap-2 ${
+              data.status === "loading" ? "btn-disabled" : isPro ? "btn-primary" : "btn-warning"
+            }`}
+            onClick={handleGenerate}
+            onPointerDown={(e) => e.stopPropagation()}
+            disabled={data.status === "loading"}
+          >
+            {data.status === "loading" ? (
+              <span>生成中{dots}</span>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                生成图片
+              </>
+            )}
+          </button>
+
+          {/* 错误信息 */}
+          {data.status === "error" && data.error && (
+            <div className="flex items-center gap-2 text-error text-xs">
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{data.error}</span>
+            </div>
+          )}
+
+          {/* 预览图 - 桌面端使用本地文件存储 */}
+          {(data.outputImage || data.outputImagePath) && (
+            <div
+              className="relative group cursor-pointer"
+              onClick={() => setShowPreview(true)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="w-full h-[120px] overflow-hidden rounded-lg bg-base-200">
+                <img
+                  src={
+                    data.outputImagePath
+                      ? getImageUrl(data.outputImagePath)
+                      : `data:image/png;base64,${data.outputImage}`
+                  }
+                  alt="Generated"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                <Maximize2 className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 输出端口 - image 类型 */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="output-image"
+          className={`!w-3 !h-3 ${outputHandleColor} !border-2 !border-white`}
+        />
+      </div>
+
+      {/* 预览弹窗 - 支持文件路径和 base64 */}
+      {showPreview && (data.outputImage || data.outputImagePath) && (
+        <ImagePreviewModal
+          imageData={data.outputImage}
+          imagePath={data.outputImagePath}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// NanoBanana Pro 节点 (支持 4K)
+export const ImageGeneratorProNode = memo((props: NodeProps<ImageGeneratorNode>) => {
+  return <ImageGeneratorBase {...props} isPro={true} />;
+});
+ImageGeneratorProNode.displayName = "ImageGeneratorProNode";
+
+// NanoBanana 节点 (快速)
+export const ImageGeneratorFastNode = memo((props: NodeProps<ImageGeneratorNode>) => {
+  return <ImageGeneratorBase {...props} isPro={false} />;
+});
+ImageGeneratorFastNode.displayName = "ImageGeneratorFastNode";
