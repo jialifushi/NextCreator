@@ -3,8 +3,8 @@ import type { Node, Edge } from "@xyflow/react";
 // 模型类型（图片生成）- 支持自定义模型名称
 export type ModelType = string;
 
-// 视频模型类型
-export type VideoModelType = "sora-2" | "sora-2-pro";
+// 视频模型类型 - 支持自定义模型名称
+export type VideoModelType = string;
 
 // 视频尺寸类型
 export type VideoSizeType = "720x1280" | "1280x720" | "1024x1792" | "1792x1024";

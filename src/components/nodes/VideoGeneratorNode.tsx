@@ -12,7 +12,13 @@ import type { VideoGeneratorNodeData, VideoModelType, VideoSizeType } from "@/ty
 // 定义节点类型
 type VideoGeneratorNode = Node<VideoGeneratorNodeData>;
 
-// 模型选项
+// 预设模型选项
+const presetModels: { value: string; label: string }[] = [
+  { value: "sora-2", label: "Sora 2" },
+  { value: "sora-2-pro", label: "Sora 2 Pro" },
+];
+
+// 兼容性：保留原有的 modelOptions 用于弹窗
 const modelOptions: { value: VideoModelType; label: string }[] = [
   { value: "sora-2", label: "Sora 2" },
   { value: "sora-2-pro", label: "Sora 2 Pro" },
@@ -64,6 +70,12 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
 
   // 当前模型
   const currentModel = data.model || "sora-2";
+
+  // 获取显示的模型名称
+  const getDisplayModelName = () => {
+    const preset = presetModels.find((m) => m.value === currentModel);
+    return preset ? preset.label : currentModel;
+  };
 
   // 检测是否连接了提示词
   const { prompt: connectedPrompt } = getConnectedInputData(id);
@@ -198,15 +210,6 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
     setIsDownloading(false);
   }, [data.taskId, isDownloading]);
 
-  // 更新模型
-  const handleModelChange = useCallback((model: VideoModelType) => {
-    const newSeconds = model === "sora-2" && data.seconds === "25" ? "15" : data.seconds;
-    updateNodeData<VideoGeneratorNodeData>(id, {
-      model,
-      seconds: newSeconds,
-    });
-  }, [id, data.seconds, updateNodeData]);
-
   // 获取当前阶段配置
   const currentStage = data.taskStage ? stageConfig[data.taskStage] : null;
 
@@ -273,28 +276,10 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
 
         {/* 节点内容 - 简化显示 */}
         <div className="p-2 space-y-2 nodrag">
-          {/* 模型选择 - 按钮样式 */}
-          <div>
-            <label className="text-xs text-base-content/60 mb-1 block">模型</label>
-            <div className="flex gap-1">
-              {modelOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={`
-                    btn btn-xs flex-1 h-7
-                    ${currentModel === opt.value ? "btn-info" : "btn-ghost bg-base-200"}
-                  `}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleModelChange(opt.value);
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+          {/* 模型显示（只读，点击设置按钮修改） */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-base-content/60">模型</span>
+            <span className="font-medium">{getDisplayModelName()}</span>
           </div>
 
           {/* 配置摘要（简化显示） */}
@@ -430,9 +415,21 @@ interface VideoDetailModalProps {
 function VideoDetailModal({ data, onClose, onUpdateData }: VideoDetailModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [customModel, setCustomModel] = useState("");
 
   const currentModel = data.model || "sora-2";
   const secondsOptions = getSecondsOptions(currentModel);
+
+  // 检查是否是自定义模型
+  const isCustomModel = !presetModels.some((m) => m.value === currentModel);
+
+  // 使用自定义模型
+  const handleCustomModelSubmit = () => {
+    if (customModel.trim()) {
+      onUpdateData({ model: customModel.trim() as VideoModelType });
+      setCustomModel("");
+    }
+  };
 
   // 进入动画
   useEffect(() => {
@@ -516,6 +513,38 @@ function VideoDetailModal({ data, onClose, onUpdateData }: VideoDetailModalProps
                   {opt.label}
                 </button>
               ))}
+            </div>
+            {/* 自定义模型显示 */}
+            {isCustomModel && (
+              <div className="mt-2 px-2 py-1.5 bg-primary/10 rounded-lg text-xs text-primary">
+                当前使用自定义模型: {currentModel}
+              </div>
+            )}
+            {/* 自定义模型输入 */}
+            <div className="mt-3">
+              <label className="text-xs text-base-content/60 mb-1 block">自定义模型</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="input input-sm input-bordered flex-1"
+                  placeholder="输入模型名称..."
+                  value={customModel}
+                  onChange={(e) => setCustomModel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleCustomModelSubmit();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-info"
+                  onClick={handleCustomModelSubmit}
+                  disabled={!customModel.trim()}
+                >
+                  确定
+                </button>
+              </div>
             </div>
           </div>
 

@@ -6,11 +6,22 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { generateImage, editImage } from "@/services/imageService";
 import { saveImage, getImageUrl, isTauriEnvironment } from "@/services/fileStorageService";
 import { ImagePreviewModal } from "@/components/ui/ImagePreviewModal";
+import { ModelSelector } from "@/components/ui/ModelSelector";
 import { useLoadingDots } from "@/hooks/useLoadingDots";
 import type { ImageGeneratorNodeData, ModelType } from "@/types";
 
 // 定义节点类型
 type ImageGeneratorNode = Node<ImageGeneratorNodeData>;
+
+// Pro 节点预设模型选项
+const proPresetModels = [
+  { value: "gemini-3-pro-image-preview", label: "NanoBanana Pro" },
+];
+
+// Fast 节点预设模型选项
+const fastPresetModels = [
+  { value: "gemini-2.5-flash-image", label: "NanoBanana" },
+];
 
 // 基础宽高比选项（NanoBanana 使用）
 const basicAspectRatioOptions = [
@@ -57,7 +68,19 @@ function ImageGeneratorBase({
   // 保存生成时的画布 ID，用于确保结果更新到正确的画布
   const canvasIdRef = useRef<string | null>(null);
 
-  const model: ModelType = isPro ? "gemini-3-pro-image-preview" : "gemini-2.5-flash-image";
+  // 获取对应的预设模型列表
+  const presetModels = isPro ? proPresetModels : fastPresetModels;
+
+  // 默认模型
+  const defaultModel: ModelType = isPro ? "gemini-3-pro-image-preview" : "gemini-2.5-flash-image";
+
+  // 使用节点数据中的模型，如果没有则使用默认模型
+  const model: ModelType = data.model || defaultModel;
+
+  // 处理模型变更
+  const handleModelChange = (value: string) => {
+    updateNodeData<ImageGeneratorNodeData>(id, { model: value });
+  };
 
   /**
    * 更新节点数据，同时更新 canvasStore 确保画布切换后数据正确
@@ -238,6 +261,15 @@ function ImageGeneratorBase({
 
         {/* 节点内容 */}
         <div className="p-2 space-y-2 nodrag">
+          {/* 模型选择 - 使用 Portal 渲染避免模糊 */}
+          <ModelSelector
+            value={model}
+            options={presetModels}
+            onChange={handleModelChange}
+            variant={isPro ? "primary" : "warning"}
+            allowCustom={true}
+          />
+
           {/* 配置选项 */}
           <div className="space-y-1.5">
             <div>

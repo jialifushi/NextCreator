@@ -1,7 +1,7 @@
 import { memo, useCallback, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { MessageSquareText, Play, AlertCircle, Copy, Check, ChevronDown, ChevronUp, FileUp, Eye, X } from "lucide-react";
+import { MessageSquareText, Play, AlertCircle, Copy, Check, FileUp, Eye, X, Settings2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
@@ -21,14 +21,11 @@ const presetModels = [
 
 export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContentNode>) => {
   const { updateNodeData, getConnectedInputData, getConnectedFilesWithInfo } = useFlowStore();
-  const [showSettings, setShowSettings] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const [customModel, setCustomModel] = useState("");
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isPreviewClosing, setIsPreviewClosing] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const previewModalRef = useRef<HTMLDivElement>(null);
 
   // 预览弹窗进入动画
@@ -62,7 +59,7 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showFullPreview, closePreview]);
 
-  // 弹窗打开时自动聚焦，使键盘事件能被弹窗捕获
+  // 弹窗打开时自动聚焦
   useEffect(() => {
     if (showFullPreview && previewModalRef.current) {
       previewModalRef.current.focus();
@@ -75,8 +72,11 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
   // 保存生成时的画布 ID
   const canvasIdRef = useRef<string | null>(null);
 
-  // 检查是否是自定义模型
-  const isCustomModel = !presetModels.some((m) => m.value === data.model);
+  // 获取显示的模型名称
+  const getDisplayModelName = () => {
+    const preset = presetModels.find((m) => m.value === data.model);
+    return preset ? preset.label : data.model;
+  };
 
   /**
    * 更新节点数据，同时更新 canvasStore
@@ -86,10 +86,8 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
       const { activeCanvasId } = useCanvasStore.getState();
       const targetCanvasId = canvasIdRef.current;
 
-      // 始终更新 flowStore
       updateNodeData<LLMContentNodeData>(nodeId, nodeData);
 
-      // 如果目标画布不是当前活跃画布，也需要更新 canvasStore
       if (targetCanvasId && targetCanvasId !== activeCanvasId) {
         const canvasStore = useCanvasStore.getState();
         const canvas = canvasStore.canvases.find((c) => c.id === targetCanvasId);
@@ -121,7 +119,6 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
     const { prompt, files } = getConnectedInputData(id);
     const { activeCanvasId } = useCanvasStore.getState();
 
-    // 记录当前画布 ID
     canvasIdRef.current = activeCanvasId;
 
     if (!prompt && files.length === 0) {
@@ -147,7 +144,6 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
         maxTokens: data.maxTokens,
         files: files.length > 0 ? files : undefined,
         onStream: (content) => {
-          // 流式更新内容
           updateNodeDataWithCanvas(id, {
             outputContent: content,
           });
@@ -188,31 +184,10 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
     }
   }, [data.outputContent]);
 
-  // 选择预设模型
-  const handleSelectModel = (value: string) => {
-    updateNodeData<LLMContentNodeData>(id, { model: value });
-    setShowModelDropdown(false);
-    setCustomModel("");
-  };
-
-  // 使用自定义模型
-  const handleCustomModelSubmit = () => {
-    if (customModel.trim()) {
-      updateNodeData<LLMContentNodeData>(id, { model: customModel.trim() });
-      setShowModelDropdown(false);
-    }
-  };
-
-  // 获取显示的模型名称
-  const getDisplayModelName = () => {
-    const preset = presetModels.find((m) => m.value === data.model);
-    return preset ? preset.label : data.model;
-  };
-
   return (
     <div
       className={`
-        w-[320px] rounded-xl bg-base-100 shadow-lg border-2 transition-all
+        w-[280px] rounded-xl bg-base-100 shadow-lg border-2 transition-all
         ${selected ? "border-primary shadow-primary/20" : "border-base-300"}
       `}
     >
@@ -243,8 +218,8 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
         <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">LLM</span>
       </div>
 
-      {/* 节点内容 */}
-      <div className="p-3 space-y-3 nodrag">
+      {/* 节点内容 - 简化显示 */}
+      <div className="p-2 space-y-2 nodrag">
         {/* 已连接文件指示器 */}
         {(() => {
           const connectedFiles = getConnectedFilesWithInfo(id);
@@ -259,145 +234,24 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
           );
         })()}
 
-        {/* 模型选择 - 优化样式 */}
-        <div className="relative" ref={dropdownRef}>
-          <label className="text-xs text-base-content/60 mb-1 block">模型</label>
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-3 py-2 bg-base-200 hover:bg-base-300 rounded-lg text-sm transition-colors border border-base-300"
-            onClick={() => setShowModelDropdown(!showModelDropdown)}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <span className={isCustomModel ? "text-primary font-medium" : ""}>
-              {getDisplayModelName()}
-            </span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${showModelDropdown ? "rotate-180" : ""}`} />
-          </button>
-
-          {/* 下拉菜单 */}
-          {showModelDropdown && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-base-100 border border-base-300 rounded-lg shadow-xl overflow-hidden">
-              {/* 预设模型 */}
-              {presetModels.map((model) => (
-                <button
-                  key={model.value}
-                  type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-base-200 transition-colors flex items-center justify-between ${
-                    data.model === model.value ? "bg-primary/10 text-primary" : ""
-                  }`}
-                  onClick={() => handleSelectModel(model.value)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <span>{model.label}</span>
-                  {data.model === model.value && <Check className="w-4 h-4" />}
-                </button>
-              ))}
-
-              {/* 分隔线 */}
-              <div className="border-t border-base-300 my-1" />
-
-              {/* 自定义模型输入 */}
-              <div className="p-2">
-                <label className="text-xs text-base-content/60 mb-1 block">自定义模型</label>
-                <div className="flex gap-1">
-                  <input
-                    type="text"
-                    className="input input-sm input-bordered flex-1 text-sm"
-                    placeholder="输入模型名称..."
-                    value={customModel}
-                    onChange={(e) => setCustomModel(e.target.value)}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleCustomModelSubmit();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={handleCustomModelSubmit}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    disabled={!customModel.trim()}
-                  >
-                    确定
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* 模型显示（只读，点击设置按钮修改） */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-base-content/60">模型</span>
+          <span className="font-medium">{getDisplayModelName()}</span>
         </div>
 
-        {/* 系统提示词 */}
-        <div>
-          <label className="text-xs text-base-content/60 mb-1 block">系统提示词</label>
-          <textarea
-            className="textarea textarea-bordered w-full h-16 text-sm resize-none"
-            placeholder="可选：设置 AI 角色或行为..."
-            value={data.systemPrompt || ""}
-            onChange={(e) =>
-              updateNodeData<LLMContentNodeData>(id, {
-                systemPrompt: e.target.value,
-              })
-            }
-            onPointerDown={(e) => e.stopPropagation()}
-          />
-        </div>
-
-        {/* 高级设置折叠 */}
-        <div>
+        {/* 配置摘要 */}
+        <div className="flex items-center justify-between text-xs text-base-content/60">
+          <span>
+            温度 {data.temperature.toFixed(1)} · {data.maxTokens} tokens
+          </span>
           <button
-            className="btn btn-ghost btn-xs w-full justify-between"
-            onClick={() => setShowSettings(!showSettings)}
+            className="btn btn-ghost btn-xs px-1"
+            onClick={() => setIsSettingsOpen(true)}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <span className="text-xs text-base-content/60">高级设置</span>
-            {showSettings ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            <Settings2 className="w-3.5 h-3.5" />
           </button>
-
-          {showSettings && (
-            <div className="space-y-3 mt-2 p-3 bg-base-200 rounded-lg">
-              {/* Temperature */}
-              <div>
-                <label className="text-xs text-base-content/60 mb-1 block">
-                  温度: {data.temperature.toFixed(1)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  value={data.temperature}
-                  onChange={(e) =>
-                    updateNodeData<LLMContentNodeData>(id, {
-                      temperature: parseFloat(e.target.value),
-                    })
-                  }
-                  className="range range-xs range-primary"
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              {/* Max Tokens */}
-              <div>
-                <label className="text-xs text-base-content/60 mb-1 block">最大输出 Tokens</label>
-                <input
-                  type="number"
-                  className="input input-sm input-bordered w-full"
-                  value={data.maxTokens}
-                  min={100}
-                  max={65536}
-                  step={100}
-                  onChange={(e) =>
-                    updateNodeData<LLMContentNodeData>(id, {
-                      maxTokens: parseInt(e.target.value) || 8192,
-                    })
-                  }
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 生成按钮 */}
@@ -425,32 +279,25 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
           </div>
         )}
 
-        {/* 输出内容预览 - 简洁摘要，点击查看详情 */}
+        {/* 输出内容预览 */}
         {data.outputContent && (
           <div
-            className="bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors"
+            className="bg-base-200 rounded-lg p-2 cursor-pointer hover:bg-base-300 transition-colors"
             onClick={() => setShowFullPreview(true)}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {/* 摘要文字，限制3行 */}
-            <p className="text-sm text-base-content line-clamp-3 mb-2">
-              {data.outputContent.replace(/[#*`>\-\[\]]/g, '').slice(0, 200)}
+            <p className="text-xs text-base-content line-clamp-3 mb-1">
+              {data.outputContent.replace(/[#*`>\-\[\]]/g, '').slice(0, 150)}
             </p>
-            {/* 查看详情按钮 */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-base-content/50">
-                {data.outputContent.length > 200 ? `${data.outputContent.length} 字符` : ''}
-              </span>
-              <div className="flex items-center gap-1 text-xs text-primary">
-                <Eye className="w-3 h-3" />
-                <span>查看详情</span>
-              </div>
+            <div className="flex items-center justify-end gap-1 text-xs text-primary">
+              <Eye className="w-3 h-3" />
+              <span>查看详情</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* 输出端口 - prompt 类型（可连接到其他节点的提示词输入） */}
+      {/* 输出端口 */}
       <Handle
         type="source"
         position={Position.Right}
@@ -458,10 +305,18 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
         className="!w-3 !h-3 !bg-blue-500 !border-2 !border-white"
       />
 
-      {/* 全屏预览弹窗 - 使用 Portal 渲染到 body */}
+      {/* 设置弹窗 */}
+      {isSettingsOpen && (
+        <LLMSettingsModal
+          data={data}
+          onClose={() => setIsSettingsOpen(false)}
+          onUpdateData={(updates) => updateNodeData<LLMContentNodeData>(id, updates)}
+        />
+      )}
+
+      {/* 全屏预览弹窗 */}
       {showFullPreview && data.outputContent && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-          {/* 背景遮罩 */}
           <div
             className={`
               absolute inset-0
@@ -470,7 +325,6 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
             `}
             onClick={closePreview}
           />
-          {/* Modal 内容 */}
           <div
             ref={previewModalRef}
             tabIndex={-1}
@@ -483,32 +337,21 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
               }
             `}
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              // 阻止键盘事件冒泡到 React Flow 画布
-              e.stopPropagation();
-            }}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             {/* 弹窗头部 */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-base-300 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <MessageSquareText className="w-5 h-5 text-primary" />
                 <span className="font-medium">内容预览</span>
-                <span className="text-xs text-base-content/50 ml-2">
-                  {data.model}
-                </span>
+                <span className="text-xs text-base-content/50 ml-2">{data.model}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  className="btn btn-ghost btn-sm gap-1"
-                  onClick={handleCopy}
-                >
+                <button className="btn btn-ghost btn-sm gap-1" onClick={handleCopy}>
                   {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                   <span className="text-xs">{copied ? "已复制" : "复制"}</span>
                 </button>
-                <button
-                  className="btn btn-ghost btn-sm btn-circle"
-                  onClick={closePreview}
-                >
+                <button className="btn btn-ghost btn-sm btn-circle" onClick={closePreview}>
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -559,3 +402,201 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
 });
 
 LLMContentNode.displayName = "LLMContentNode";
+
+// 设置弹窗组件
+interface LLMSettingsModalProps {
+  data: LLMContentNodeData;
+  onClose: () => void;
+  onUpdateData: (updates: Partial<LLMContentNodeData>) => void;
+}
+
+function LLMSettingsModal({ data, onClose, onUpdateData }: LLMSettingsModalProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [customModel, setCustomModel] = useState("");
+
+  // 检查是否是自定义模型
+  const isCustomModel = !presetModels.some((m) => m.value === data.model);
+
+  // 进入动画
+  useEffect(() => {
+    requestAnimationFrame(() => setIsVisible(true));
+  }, []);
+
+  // 关闭时先播放退出动画
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setIsVisible(false);
+    setTimeout(onClose, 200);
+  }, [onClose]);
+
+  // ESC 键关闭
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleClose]);
+
+  // 使用自定义模型
+  const handleCustomModelSubmit = () => {
+    if (customModel.trim()) {
+      onUpdateData({ model: customModel.trim() });
+      setCustomModel("");
+    }
+  };
+
+  return createPortal(
+    <div
+      className={`
+        fixed inset-0 z-[9999] flex items-center justify-center p-4
+        transition-all duration-200 ease-out
+        ${isVisible && !isClosing ? "bg-black/60" : "bg-black/0"}
+      `}
+      onClick={handleClose}
+    >
+      <div
+        className={`
+          w-full max-w-md bg-base-100 rounded-2xl shadow-2xl overflow-hidden
+          transition-all duration-200 ease-out
+          ${isVisible && !isClosing
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4"
+          }
+        `}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 头部 */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-teal-500 to-cyan-500">
+          <div className="flex items-center gap-2">
+            <MessageSquareText className="w-5 h-5 text-white" />
+            <span className="text-base font-medium text-white">LLM 设置</span>
+          </div>
+          <button
+            className="btn btn-circle btn-ghost btn-sm text-white hover:bg-white/20"
+            onClick={handleClose}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="p-4 space-y-4">
+          {/* 模型选择 */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">模型</label>
+            <div className="space-y-1">
+              {presetModels.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`
+                    w-full px-3 py-2 text-left text-sm rounded-lg
+                    flex items-center justify-between transition-colors
+                    ${data.model === opt.value
+                      ? "bg-info/20 text-info border border-info/30"
+                      : "bg-base-200 hover:bg-base-300"
+                    }
+                  `}
+                  onClick={() => onUpdateData({ model: opt.value })}
+                >
+                  <span>{opt.label}</span>
+                  {data.model === opt.value && <Check className="w-4 h-4" />}
+                </button>
+              ))}
+            </div>
+            {/* 当前自定义模型显示 */}
+            {isCustomModel && (
+              <div className="mt-2 px-2 py-1.5 bg-primary/10 rounded-lg text-xs text-primary">
+                当前使用自定义模型: {data.model}
+              </div>
+            )}
+            {/* 自定义模型输入 */}
+            <div className="mt-3">
+              <label className="text-xs text-base-content/60 mb-1 block">自定义模型</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="input input-sm input-bordered flex-1"
+                  placeholder="输入模型名称..."
+                  value={customModel}
+                  onChange={(e) => setCustomModel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleCustomModelSubmit();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-info"
+                  onClick={handleCustomModelSubmit}
+                  disabled={!customModel.trim()}
+                >
+                  确定
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 系统提示词 */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">系统提示词</label>
+            <textarea
+              className="textarea textarea-bordered w-full h-20 text-sm resize-none"
+              placeholder="可选：设置 AI 角色或行为..."
+              value={data.systemPrompt || ""}
+              onChange={(e) => onUpdateData({ systemPrompt: e.target.value })}
+            />
+          </div>
+
+          {/* 温度 */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">
+              温度: {data.temperature.toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              value={data.temperature}
+              onChange={(e) => onUpdateData({ temperature: parseFloat(e.target.value) })}
+              className="range range-sm range-info"
+            />
+            <div className="flex justify-between text-xs text-base-content/50 mt-1">
+              <span>精确</span>
+              <span>创意</span>
+            </div>
+          </div>
+
+          {/* 最大输出 Tokens */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">最大输出 Tokens</label>
+            <input
+              type="number"
+              className="input input-sm input-bordered w-full"
+              value={data.maxTokens}
+              min={100}
+              max={65536}
+              step={100}
+              onChange={(e) => onUpdateData({ maxTokens: parseInt(e.target.value) || 8192 })}
+            />
+          </div>
+        </div>
+
+        {/* 底部 */}
+        <div className="flex items-center justify-end px-4 py-3 bg-base-200/50 border-t border-base-300">
+          <span className="text-xs text-base-content/50 mr-auto">按 ESC 关闭</span>
+          <button className="btn btn-ghost btn-sm" onClick={handleClose}>
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
