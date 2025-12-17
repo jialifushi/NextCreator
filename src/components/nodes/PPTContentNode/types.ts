@@ -122,8 +122,8 @@ export const IMAGE_PRESET_MODELS = [
 // 默认图片生成模型
 export const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
 
-// 视觉风格模板类型
-export type VisualStyleTemplate = "academic" | "business" | "tech";
+// 视觉风格模板类型（增加 custom 自定义选项）
+export type VisualStyleTemplate = "academic" | "business" | "tech" | "custom";
 
 // PPT 内容节点数据
 export interface PPTContentNodeData {
@@ -157,6 +157,8 @@ export interface PPTContentNodeData {
   };
   // 视觉风格模板选择
   visualStyleTemplate: VisualStyleTemplate;
+  // 自定义视觉风格提示词（当 visualStyleTemplate 为 "custom" 时使用）
+  customVisualStylePrompt?: string;
   // 选中的基底图 ID（多图时使用）
   selectedTemplateId?: string;
   // 第一页是否为标题页（默认 true）
@@ -355,10 +357,19 @@ export const VISUAL_STYLE_TEMPLATES: Record<VisualStyleTemplate, { name: string;
 - 顶部标题直接使用页面标题文字替换基底图中的标题文字，保持原有的标题样式和位置
 - 推荐配图仅作为参考，如果有合适的配图需求就融入设计，不是必须要有配图元素`,
   },
+  // 自定义风格 - 占位，实际使用 customVisualStylePrompt
+  custom: {
+    name: "自定义",
+    prompt: "",
+  },
 };
 
 // 获取视觉风格提示词
-export function getVisualStylePrompt(template: VisualStyleTemplate): string {
+export function getVisualStylePrompt(template: VisualStyleTemplate, customPrompt?: string): string {
+  // 自定义风格使用用户输入的提示词
+  if (template === "custom") {
+    return customPrompt || VISUAL_STYLE_TEMPLATES.academic.prompt; // 降级为学术风格
+  }
   return VISUAL_STYLE_TEMPLATES[template].prompt;
 }
 

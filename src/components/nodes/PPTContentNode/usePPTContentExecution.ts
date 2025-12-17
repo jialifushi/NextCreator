@@ -313,7 +313,7 @@ export function usePPTContentExecution({
         const isTitlePage = page.pageNumber === 1 && data.firstPageIsTitlePage;
 
         // 构建完整的页面图片生成提示词（使用视觉风格模板，包含补充信息）
-        const visualStylePrompt = getVisualStylePrompt(data.visualStyleTemplate);
+        const visualStylePrompt = getVisualStylePrompt(data.visualStyleTemplate, data.customVisualStylePrompt);
         const prompt = buildPageImagePrompt(
           page,
           visualStylePrompt,
@@ -459,7 +459,7 @@ export function usePPTContentExecution({
         abortControllersRef.current.delete(pageId);
       }
     },
-    [data.pages, data.imageConfig.aspectRatio, data.imageConfig.imageSize, data.imageModel, data.visualStyleTemplate, getTemplateImage, nodeId, updatePageState]
+    [data.pages, data.imageConfig.aspectRatio, data.imageConfig.imageSize, data.imageModel, data.visualStyleTemplate, data.customVisualStylePrompt, data.firstPageIsTitlePage, getTemplateImage, nodeId, updatePageState, getConnectedImages, getConnectedImagesWithInfo]
   );
 
   // 开始批量生成（并发执行所有待处理任务）

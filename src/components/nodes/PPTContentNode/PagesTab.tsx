@@ -5,15 +5,9 @@ import {
   RotateCcw,
   CheckCircle,
   AlertCircle,
-  Palette,
-  BookOpen,
-  Briefcase,
-  Cpu,
   Sparkles,
-  FileText,
 } from "lucide-react";
-import type { PPTPageItem, PPTContentNodeData, VisualStyleTemplate } from "./types";
-import { VISUAL_STYLE_TEMPLATES } from "./types";
+import type { PPTPageItem, PPTContentNodeData } from "./types";
 import type { ConnectedImageInfo } from "./types";
 import { PageItemRow } from "./PageItemRow";
 
@@ -21,11 +15,8 @@ interface PagesTabProps {
   pages: PPTPageItem[];
   generationStatus: PPTContentNodeData["generationStatus"];
   progress: PPTContentNodeData["progress"];
-  visualStyleTemplate: VisualStyleTemplate;
-  imageConfig: PPTContentNodeData["imageConfig"];
   hasTemplateImage: boolean;
   connectedImages?: ConnectedImageInfo[];
-  firstPageIsTitlePage: boolean;
   onStartAll: () => void;
   onPauseAll: () => void;
   onResumeAll: () => void;
@@ -36,52 +27,14 @@ interface PagesTabProps {
   onStopPage: (id: string) => void;
   onUploadImage: (id: string, imageData: string) => void;
   onShowScript?: (item: PPTPageItem) => void;
-  onChangeStyleTemplate: (template: VisualStyleTemplate) => void;
-  onChangeImageConfig: (config: Partial<PPTContentNodeData["imageConfig"]>) => void;
-  onChangeFirstPageIsTitlePage: (value: boolean) => void;
 }
-
-// 风格模板配置
-const styleConfigs: Record<VisualStyleTemplate, {
-  icon: React.ReactNode;
-  gradient: string;
-}> = {
-  academic: {
-    icon: <BookOpen className="w-4 h-4" />,
-    gradient: "from-blue-500 to-indigo-600",
-  },
-  business: {
-    icon: <Briefcase className="w-4 h-4" />,
-    gradient: "from-emerald-500 to-teal-600",
-  },
-  tech: {
-    icon: <Cpu className="w-4 h-4" />,
-    gradient: "from-violet-500 to-purple-600",
-  },
-};
-
-// 宽高比选项
-const aspectRatioOptions = [
-  { value: "16:9", label: "16:9" },
-  { value: "4:3", label: "4:3" },
-];
-
-// 清晰度选项
-const imageSizeOptions = [
-  { value: "1K", label: "1K" },
-  { value: "2K", label: "2K" },
-  { value: "4K", label: "4K" },
-];
 
 export function PagesTab({
   pages,
   generationStatus,
   progress,
-  visualStyleTemplate,
-  imageConfig,
   hasTemplateImage,
   connectedImages = [],
-  firstPageIsTitlePage,
   onStartAll,
   onPauseAll,
   onResumeAll,
@@ -92,9 +45,6 @@ export function PagesTab({
   onStopPage,
   onUploadImage,
   onShowScript,
-  onChangeStyleTemplate,
-  onChangeImageConfig,
-  onChangeFirstPageIsTitlePage,
 }: PagesTabProps) {
   // 计算统计信息
   const stats = useMemo(() => {
@@ -137,103 +87,6 @@ export function PagesTab({
 
   return (
     <div className="h-full flex flex-col space-y-3">
-      {/* 配置区域 - 紧凑布局 */}
-      <div className="flex items-center gap-4 bg-base-200/30 rounded-xl px-4 py-3">
-        {/* 视觉风格选择 */}
-        <div className="flex items-center gap-2">
-          <Palette className="w-4 h-4 text-base-content/50" />
-          <div className="flex gap-1">
-            {(Object.keys(VISUAL_STYLE_TEMPLATES) as VisualStyleTemplate[]).map((key) => {
-              const config = styleConfigs[key];
-              const isSelected = visualStyleTemplate === key;
-              return (
-                <button
-                  key={key}
-                  className={`
-                    flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                    transition-all duration-200
-                    ${isSelected
-                      ? `bg-gradient-to-r ${config.gradient} text-white shadow-sm`
-                      : "bg-base-200 text-base-content/70 hover:bg-base-300"
-                    }
-                  `}
-                  onClick={() => onChangeStyleTemplate(key)}
-                  disabled={isRunning}
-                >
-                  {config.icon}
-                  {VISUAL_STYLE_TEMPLATES[key].name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="w-px h-6 bg-base-300" />
-
-        {/* 比例选择 */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-base-content/50">比例</span>
-          <div className="flex gap-1">
-            {aspectRatioOptions.map(opt => (
-              <button
-                key={opt.value}
-                className={`
-                  px-2.5 py-1 rounded-md text-xs font-medium transition-all
-                  ${imageConfig.aspectRatio === opt.value
-                    ? "bg-primary text-primary-content"
-                    : "bg-base-200 text-base-content/70 hover:bg-base-300"
-                  }
-                `}
-                onClick={() => onChangeImageConfig({ aspectRatio: opt.value as "16:9" | "4:3" })}
-                disabled={isRunning}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-px h-6 bg-base-300" />
-
-        {/* 清晰度选择 */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-base-content/50">清晰度</span>
-          <div className="flex gap-1">
-            {imageSizeOptions.map(opt => (
-              <button
-                key={opt.value}
-                className={`
-                  px-2.5 py-1 rounded-md text-xs font-medium transition-all
-                  ${imageConfig.imageSize === opt.value
-                    ? "bg-primary text-primary-content"
-                    : "bg-base-200 text-base-content/70 hover:bg-base-300"
-                  }
-                `}
-                onClick={() => onChangeImageConfig({ imageSize: opt.value as "1K" | "2K" | "4K" })}
-                disabled={isRunning}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-px h-6 bg-base-300" />
-
-        {/* 标题页开关 */}
-        <label className="flex items-center gap-2 cursor-pointer">
-          <FileText className="w-4 h-4 text-base-content/50" />
-          <span className="text-xs text-base-content/50">首页为标题页</span>
-          <input
-            type="checkbox"
-            className="toggle toggle-primary toggle-xs"
-            checked={firstPageIsTitlePage}
-            onChange={(e) => onChangeFirstPageIsTitlePage(e.target.checked)}
-            disabled={isRunning}
-          />
-        </label>
-      </div>
-
       {/* 模板图提示 */}
       {!hasTemplateImage && (
         <div className="flex items-center gap-2 text-warning text-sm bg-warning/10 rounded-lg px-3 py-2 border border-warning/20">

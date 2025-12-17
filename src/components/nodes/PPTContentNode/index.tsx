@@ -55,8 +55,16 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
   const [isScriptModalVisible, setIsScriptModalVisible] = useState(false);
   // 内置模板弹窗状态
   const [showBuiltinTemplateModal, setShowBuiltinTemplateModal] = useState(false);
-  // 讲稿弹窗 ref，用于自动聚焦
+  // 弹窗 ref，用于自动聚焦
+  const detailPanelRef = useRef<HTMLDivElement>(null);
   const scriptModalRef = useRef<HTMLDivElement>(null);
+
+  // 详情面板打开时自动聚焦，使键盘事件能被弹窗捕获
+  useEffect(() => {
+    if (showDetailPanel && isDetailPanelVisible && detailPanelRef.current) {
+      detailPanelRef.current.focus();
+    }
+  }, [showDetailPanel, isDetailPanelVisible]);
 
   // 讲稿弹窗打开时自动聚焦，使键盘事件能被弹窗捕获
   useEffect(() => {
@@ -219,6 +227,11 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
     updateNodeData<PPTContentNodeData>(id, { firstPageIsTitlePage: value });
   }, [id, updateNodeData]);
 
+  // 更新自定义视觉风格提示词
+  const handleChangeCustomStylePrompt = useCallback((prompt: string) => {
+    updateNodeData<PPTContentNodeData>(id, { customVisualStylePrompt: prompt });
+  }, [id, updateNodeData]);
+
   // 显示讲稿
   const handleShowScript = useCallback((item: PPTPageItem) => {
     openScriptModal(item);
@@ -234,9 +247,17 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
               config={data.outlineConfig}
               outlineModel={data.outlineModel || "gemini-3-pro-preview"}
               imageModel={data.imageModel || "gemini-3-pro-image-preview"}
+              imageConfig={data.imageConfig}
+              visualStyleTemplate={data.visualStyleTemplate}
+              customVisualStylePrompt={data.customVisualStylePrompt}
+              firstPageIsTitlePage={data.firstPageIsTitlePage ?? true}
               onChange={handleConfigChange}
               onModelChange={(model) => updateNodeData<PPTContentNodeData>(id, { outlineModel: model })}
               onImageModelChange={(model) => updateNodeData<PPTContentNodeData>(id, { imageModel: model })}
+              onChangeImageConfig={handleChangeImageConfig}
+              onChangeStyleTemplate={handleChangeStyleTemplate}
+              onChangeCustomStylePrompt={handleChangeCustomStylePrompt}
+              onChangeFirstPageIsTitlePage={handleChangeFirstPageIsTitlePage}
             />
             {/* 弹性空间 */}
             <div className="flex-1" />
@@ -280,11 +301,8 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
             pages={data.pages}
             generationStatus={data.generationStatus}
             progress={data.progress}
-            visualStyleTemplate={data.visualStyleTemplate}
-            imageConfig={data.imageConfig}
             hasTemplateImage={!!getTemplateImage()}
             connectedImages={getConnectedImages()}
-            firstPageIsTitlePage={data.firstPageIsTitlePage ?? true}
             onStartAll={execution.startGeneration}
             onPauseAll={execution.pauseGeneration}
             onResumeAll={execution.resumeGeneration}
@@ -295,9 +313,6 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
             onStopPage={execution.stopPage}
             onUploadImage={execution.uploadPageImage}
             onShowScript={handleShowScript}
-            onChangeStyleTemplate={handleChangeStyleTemplate}
-            onChangeImageConfig={handleChangeImageConfig}
-            onChangeFirstPageIsTitlePage={handleChangeFirstPageIsTitlePage}
           />
         );
 
@@ -709,8 +724,10 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
           onClick={closeDetailPanel}
         >
           <div
+            ref={detailPanelRef}
+            tabIndex={-1}
             className={`
-              bg-base-100 rounded-xl shadow-2xl w-[900px] h-[85vh] flex flex-col
+              bg-base-100 rounded-xl shadow-2xl w-[900px] h-[85vh] flex flex-col outline-none
               transition-all duration-200 ease-out
               ${isDetailPanelVisible
                 ? "opacity-100 scale-100 translate-y-0"
@@ -718,6 +735,7 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
               }
             `}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             {/* 弹窗头部 */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-base-300">
