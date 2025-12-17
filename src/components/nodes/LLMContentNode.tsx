@@ -140,11 +140,6 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
         temperature: data.temperature,
         maxTokens: data.maxTokens,
         files: files.length > 0 ? files : undefined,
-        onStream: (content) => {
-          updateNodeDataWithCanvas(id, {
-            outputContent: content,
-          });
-        },
       });
 
       if (response.content) {

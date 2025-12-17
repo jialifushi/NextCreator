@@ -1,10 +1,14 @@
 mod storage;
 mod gemini;
 mod ocr_inpaint;
+mod llm;
+mod video;
 
 use storage::*;
 use gemini::*;
 use ocr_inpaint::*;
+use llm::*;
+use video::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,7 +31,14 @@ pub fn run() {
             gemini_generate_text,
             process_ppt_page,
             test_ocr_connection,
-            test_inpaint_connection
+            test_inpaint_connection,
+            // LLM 代理命令
+            openai_chat_completion,
+            claude_chat_completion,
+            // 视频服务代理命令
+            video_create_task,
+            video_get_status,
+            video_get_content
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
