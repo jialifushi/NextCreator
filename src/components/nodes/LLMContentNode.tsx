@@ -1,7 +1,7 @@
 import { memo, useCallback, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { MessageSquareText, Play, AlertCircle, Copy, Check, FileUp, Eye, X, Settings2, ImageIcon } from "lucide-react";
+import { MessageSquareText, Play, AlertCircle, Copy, Check, FileUp, Eye, X, Settings2, ImageIcon, AlertTriangle, CircleAlert } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
@@ -14,7 +14,7 @@ import type { LLMContentNodeData } from "@/types";
 type LLMContentNode = Node<LLMContentNodeData>;
 
 export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContentNode>) => {
-  const { updateNodeData, getConnectedInputData, getConnectedFilesWithInfo, getConnectedImagesWithInfo } = useFlowStore();
+  const { updateNodeData, getConnectedInputData, getConnectedFilesWithInfo, getConnectedImagesWithInfo, getEmptyConnectedInputs } = useFlowStore();
   const [copied, setCopied] = useState(false);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -24,6 +24,14 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
 
   // 获取当前供应商的预设模型列表
   const { presetModels } = useLLMPresetModels("llmContent");
+
+  // 检测空输入连接
+  const emptyInputs = getEmptyConnectedInputs(id);
+  const hasEmptyInputs = emptyInputs.emptyImages.length > 0 || emptyInputs.emptyFiles.length > 0;
+
+  // 检测是否有任何有效输入（提示词、图片或文件）
+  const { prompt, images, files } = getConnectedInputData(id);
+  const hasAnyInput = (prompt !== undefined) || images.length > 0 || files.length > 0;
 
   // 预览弹窗进入动画
   useEffect(() => {
@@ -225,7 +233,27 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
           <MessageSquareText className="w-4 h-4 text-white" />
           <span className="text-sm font-medium text-white">{data.label}</span>
         </div>
-        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">LLM</span>
+        <div className="flex items-center gap-1">
+          {/* 未连接任何输入警告 */}
+          {!hasAnyInput && (
+            <div className="tooltip tooltip-left" data-tip="请连接提示词、图片或文件节点">
+              <CircleAlert className="w-4 h-4 text-white/80" />
+            </div>
+          )}
+          {/* 空输入警告图标 */}
+          {hasAnyInput && hasEmptyInputs && (
+            <div
+              className="tooltip tooltip-left"
+              data-tip={`输入为空: ${[
+                ...emptyInputs.emptyImages.map(i => `图片-${i.label}`),
+                ...emptyInputs.emptyFiles.map(f => `文件-${f.label}`),
+              ].join(", ")}`}
+            >
+              <AlertTriangle className="w-4 h-4 text-yellow-300" />
+            </div>
+          )}
+          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">LLM</span>
+        </div>
       </div>
 
       {/* 节点内容 - 简化显示 */}
@@ -280,13 +308,17 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
 
         {/* 生成按钮 */}
         <button
-          className={`btn btn-sm w-full gap-2 ${data.status === "loading" ? "btn-disabled" : "btn-primary"}`}
+          className={`btn btn-sm w-full gap-2 ${
+            data.status === "loading" || !hasAnyInput ? "btn-disabled" : "btn-primary"
+          }`}
           onClick={handleGenerate}
           onPointerDown={(e) => e.stopPropagation()}
-          disabled={data.status === "loading"}
+          disabled={data.status === "loading" || !hasAnyInput}
         >
           {data.status === "loading" ? (
             <span>生成中{dots}</span>
+          ) : !hasAnyInput ? (
+            <span className="text-base-content/50">待连接输入</span>
           ) : (
             <>
               <Play className="w-4 h-4" />

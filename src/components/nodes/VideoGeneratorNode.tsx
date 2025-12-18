@@ -1,7 +1,7 @@
 import { memo, useCallback, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Video, Play, AlertCircle, Square, Download, CheckCircle2, Eye, X, Settings2, Link2Off, Loader2 } from "lucide-react";
+import { Video, Play, AlertCircle, Square, Download, CheckCircle2, Eye, X, Settings2, Link2Off, Loader2, AlertTriangle, CircleAlert } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { createVideoTask, getVideoContentBlobUrl, downloadVideo, type VideoTaskStage } from "@/services/videoService";
@@ -57,7 +57,7 @@ const stageConfig: Record<VideoTaskStage, { label: string; color: string }> = {
 };
 
 export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoGeneratorNode>) => {
-  const { updateNodeData, getConnectedInputData } = useFlowStore();
+  const { updateNodeData, getConnectedInputData, getEmptyConnectedInputs } = useFlowStore();
   const activeCanvasId = useCanvasStore((state) => state.activeCanvasId);
   const [previewState, setPreviewState] = useState<"idle" | "loading" | "ready">("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -67,6 +67,10 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
 
   // 省略号加载动画
   const dots = useLoadingDots(data.status === "loading" || previewState === "loading" || isDownloading);
+
+  // 检测空输入连接
+  const emptyInputs = getEmptyConnectedInputs(id);
+  const hasEmptyImageInputs = emptyInputs.emptyImages.length > 0;
 
   // 当前模型
   const currentModel = data.model || "sora-2";
@@ -269,9 +273,23 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
             <Video className="w-4 h-4 text-white" />
             <span className="text-sm font-medium text-white">{data.label}</span>
           </div>
-          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white uppercase">
-            {currentModel === "sora-2-pro" ? "PRO" : "STD"}
-          </span>
+          <div className="flex items-center gap-1">
+            {/* 未连接提示词警告 */}
+            {!isPromptConnected && (
+              <div className="tooltip tooltip-left" data-tip="请连接提示词节点">
+                <CircleAlert className="w-4 h-4 text-white/80" />
+              </div>
+            )}
+            {/* 空输入警告图标 */}
+            {isPromptConnected && hasEmptyImageInputs && (
+              <div className="tooltip tooltip-left" data-tip={`图片输入为空: ${emptyInputs.emptyImages.map(i => i.label).join(", ")}`}>
+                <AlertTriangle className="w-4 h-4 text-yellow-300" />
+              </div>
+            )}
+            <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white uppercase">
+              {currentModel === "sora-2-pro" ? "PRO" : "STD"}
+            </span>
+          </div>
         </div>
 
         {/* 节点内容 - 简化显示 */}
@@ -361,12 +379,19 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
             </div>
           ) : (
             <button
-              className="btn btn-sm btn-info w-full gap-2"
+              className={`btn btn-sm w-full gap-2 ${!isPromptConnected ? "btn-disabled" : "btn-info"}`}
               onClick={handleGenerate}
               onPointerDown={(e) => e.stopPropagation()}
+              disabled={!isPromptConnected}
             >
-              <Play className="w-4 h-4" />
-              生成视频
+              {!isPromptConnected ? (
+                <span className="text-base-content/50">待连接提示词</span>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  生成视频
+                </>
+              )}
             </button>
           )}
         </div>

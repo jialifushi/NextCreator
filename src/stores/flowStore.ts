@@ -120,6 +120,13 @@ interface FlowStore {
     fileData: string;
   }>;
 
+  // 检测空输入连接：返回连接了但数据为空的输入类型
+  getEmptyConnectedInputs: (nodeId: string) => {
+    emptyImages: Array<{ id: string; label: string }>;
+    emptyFiles: Array<{ id: string; label: string }>;
+    emptyPrompts: Array<{ id: string; label: string }>;
+  };
+
   // === 工作流执行 ===
   workflowExecution: WorkflowExecutionContext | null;
   workflowEngine: WorkflowEngine | null;
@@ -960,6 +967,80 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
 
     return files;
+  },
+
+  // 检测空输入连接：返回连接了但数据为空的输入类型
+  getEmptyConnectedInputs: (nodeId) => {
+    const { nodes, edges } = get();
+    const incomingEdges = edges.filter((edge) => edge.target === nodeId);
+
+    const emptyImages: Array<{ id: string; label: string }> = [];
+    const emptyFiles: Array<{ id: string; label: string }> = [];
+    const emptyPrompts: Array<{ id: string; label: string }> = [];
+
+    for (const edge of incomingEdges) {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (!sourceNode) continue;
+
+      const targetHandle = edge.targetHandle;
+
+      // 检测图片输入
+      if (targetHandle === "input-image" || (!targetHandle && sourceNode.type === "imageInputNode")) {
+        if (sourceNode.type === "imageInputNode") {
+          const data = sourceNode.data as { imageData?: string; label?: string };
+          if (!data.imageData) {
+            emptyImages.push({
+              id: sourceNode.id,
+              label: (data.label as string) || "图片输入",
+            });
+          }
+        } else if (sourceNode.type === "imageGeneratorProNode" || sourceNode.type === "imageGeneratorFastNode") {
+          const data = sourceNode.data as { outputImage?: string; label?: string };
+          if (!data.outputImage) {
+            emptyImages.push({
+              id: sourceNode.id,
+              label: (data.label as string) || "图片生成",
+            });
+          }
+        }
+      }
+
+      // 检测文件输入
+      if (targetHandle === "input-file" || (!targetHandle && sourceNode.type === "fileUploadNode")) {
+        if (sourceNode.type === "fileUploadNode") {
+          const data = sourceNode.data as { fileData?: string; label?: string };
+          if (!data.fileData) {
+            emptyFiles.push({
+              id: sourceNode.id,
+              label: (data.label as string) || "文件上传",
+            });
+          }
+        }
+      }
+
+      // 检测提示词输入
+      if (targetHandle === "input-prompt" || (!targetHandle && sourceNode.type === "promptNode")) {
+        if (sourceNode.type === "promptNode") {
+          const data = sourceNode.data as { prompt?: string; label?: string };
+          if (!data.prompt || data.prompt.trim() === "") {
+            emptyPrompts.push({
+              id: sourceNode.id,
+              label: (data.label as string) || "提示词",
+            });
+          }
+        } else if (sourceNode.type === "llmContentNode") {
+          const data = sourceNode.data as { outputContent?: string; label?: string };
+          if (!data.outputContent || data.outputContent.trim() === "") {
+            emptyPrompts.push({
+              id: sourceNode.id,
+              label: (data.label as string) || "LLM 内容",
+            });
+          }
+        }
+      }
+    }
+
+    return { emptyImages, emptyFiles, emptyPrompts };
   },
 
   // === 工作流执行状态和方法 ===

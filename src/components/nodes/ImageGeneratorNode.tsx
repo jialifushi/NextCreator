@@ -1,6 +1,6 @@
 import { memo, useCallback, useState, useRef } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Sparkles, Zap, Play, AlertCircle, Maximize2 } from "lucide-react";
+import { Sparkles, Zap, Play, AlertCircle, Maximize2, AlertTriangle, CircleAlert } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { generateImage, editImage } from "@/services/imageService";
@@ -59,11 +59,19 @@ function ImageGeneratorBase({
   selected,
   isPro,
 }: NodeProps<ImageGeneratorNode> & { isPro: boolean }) {
-  const { updateNodeData, getConnectedInputData } = useFlowStore();
+  const { updateNodeData, getConnectedInputData, getEmptyConnectedInputs } = useFlowStore();
   const [showPreview, setShowPreview] = useState(false);
 
   // 省略号加载动画
   const dots = useLoadingDots(data.status === "loading");
+
+  // 检测空输入连接
+  const emptyInputs = getEmptyConnectedInputs(id);
+  const hasEmptyImageInputs = emptyInputs.emptyImages.length > 0;
+
+  // 检测是否连接了提示词（包括空提示词的情况）
+  const { prompt } = getConnectedInputData(id);
+  const isPromptConnected = prompt !== undefined;
 
   // 保存生成时的画布 ID，用于确保结果更新到正确的画布
   const canvasIdRef = useRef<string | null>(null);
@@ -254,9 +262,23 @@ function ImageGeneratorBase({
             )}
             <span className="text-sm font-medium text-white">{data.label}</span>
           </div>
-          {isPro && (
-            <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">PRO</span>
-          )}
+          <div className="flex items-center gap-1">
+            {/* 未连接提示词警告 */}
+            {!isPromptConnected && (
+              <div className="tooltip tooltip-left" data-tip="请连接提示词节点">
+                <CircleAlert className="w-4 h-4 text-white/80" />
+              </div>
+            )}
+            {/* 空输入警告图标 */}
+            {isPromptConnected && hasEmptyImageInputs && (
+              <div className="tooltip tooltip-left" data-tip={`图片输入为空: ${emptyInputs.emptyImages.map(i => i.label).join(", ")}`}>
+                <AlertTriangle className="w-4 h-4 text-yellow-300" />
+              </div>
+            )}
+            {isPro && (
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">PRO</span>
+            )}
+          </div>
         </div>
 
         {/* 节点内容 */}
@@ -333,14 +355,18 @@ function ImageGeneratorBase({
           {/* 生成按钮 */}
           <button
             className={`btn btn-sm w-full gap-2 ${
-              data.status === "loading" ? "btn-disabled" : isPro ? "btn-primary" : "btn-warning"
+              data.status === "loading" || !isPromptConnected
+                ? "btn-disabled"
+                : isPro ? "btn-primary" : "btn-warning"
             }`}
             onClick={handleGenerate}
             onPointerDown={(e) => e.stopPropagation()}
-            disabled={data.status === "loading"}
+            disabled={data.status === "loading" || !isPromptConnected}
           >
             {data.status === "loading" ? (
               <span>生成中{dots}</span>
+            ) : !isPromptConnected ? (
+              <span className="text-base-content/50">待连接提示词</span>
             ) : (
               <>
                 <Play className="w-4 h-4" />
