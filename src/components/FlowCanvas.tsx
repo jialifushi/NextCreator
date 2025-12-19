@@ -81,6 +81,7 @@ export function FlowCanvas() {
     clipboard,
     isValidConnection,
     executeFromNode,
+    updateNodeData,
   } = useFlowStore();
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -194,7 +195,7 @@ export function FlowCanvas() {
   }, []);
 
   const onDrop = useCallback(
-    (event: React.DragEvent) => {
+    async (event: React.DragEvent) => {
       event.preventDefault();
 
       if (!reactFlowInstance.current) {
@@ -205,6 +206,45 @@ export function FlowCanvas() {
         x: event.clientX,
         y: event.clientY,
       });
+
+      // 检查是否是外部图片文件拖拽
+      const files = event.dataTransfer.files;
+      if (files && files.length > 0) {
+        const imageFiles = Array.from(files).filter(file =>
+          file.type.startsWith("image/")
+        );
+
+        if (imageFiles.length > 0) {
+          // 为每个图片创建一个节点，水平排列
+          const nodeWidth = 220;
+          const nodeGap = 20;
+
+          for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i];
+            const nodePosition = {
+              x: position.x + i * (nodeWidth + nodeGap),
+              y: position.y,
+            };
+
+            // 创建节点
+            const nodeId = addNode("imageInputNode", nodePosition, {
+              label: "图片输入",
+            } as CustomNodeData);
+
+            // 读取图片文件并更新节点数据
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = (reader.result as string).split(",")[1];
+              updateNodeData(nodeId, {
+                imageData: base64,
+                fileName: file.name,
+              });
+            };
+            reader.readAsDataURL(file);
+          }
+          return;
+        }
+      }
 
       // 检查是否是提示词模板拖放
       const promptTemplateStr = event.dataTransfer.getData("application/reactflow/prompt-template");
@@ -229,7 +269,7 @@ export function FlowCanvas() {
       const defaultData = nodeDataStr ? JSON.parse(nodeDataStr) : {};
       addNode(nodeType, position, defaultData as CustomNodeData);
     },
-    [addNode, addPromptTemplate]
+    [addNode, addPromptTemplate, updateNodeData]
   );
 
   const onInit = useCallback((instance: ReactFlowInstance<CustomNode>) => {
