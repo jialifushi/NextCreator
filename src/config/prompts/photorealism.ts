@@ -462,5 +462,170 @@ Keep the person exactly as shown in the reference image with 100% identical faci
       previewImage: "https://pbs.twimg.com/media/G6_pAefWYAAilqz?format=jpg&name=large",
       nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "3:4" },
     },
+    {
+      id: "business-portrait",
+      title: "商务照",
+      titleEn: "Business Portrait",
+      description: "将普通照片转换为专业商务人像",
+      prompt: `保持上传图片中人物的面部特征完全一致。
+为他们穿上一套专业的海军蓝商务西装和白衬衫,类似于参考图片。
+背景:将主体置于一个干净、纯色的深灰色影棚摄影背景前。背景应有微妙的渐变,主体后面稍亮,边缘处较暗(暗角效果)。不应有其他物体。
+摄影风格:使用索尼A7III相机和85mm f/1.4镜头拍摄,营造出优美的人像压缩效果。
+灯光:使用经典的三点式布光。主光应在脸上形成柔和、轮廓分明的阴影。一个微妙的轮廓光应将主体的肩膀和头发与深色背景分离开来。
+关键细节:渲染出带有可见毛孔的自然皮肤纹理,而不是过度磨皮的效果。为眼睛添加自然的眼神光。西装的面料应显示出微妙的羊毛质感。
+最终图像应为一张超逼真的8k专业头像照。`,
+      tags: ["商务", "职业", "专业", "证件照"],
+      source: "Wechat@01Founder",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/business_portrait.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+    },
+    {
+      id: "1990s-polaroid-party",
+      title: "90年代宝丽来派对",
+      titleEn: "1990s Polaroid Party Atmosphere",
+      description: "复刻90年代末宝丽来派对氛围感照片",
+      prompt: `1:1 宽高比,一张90年代末的宝丽来照片。上传图片的人物出现在照片中,被捕捉到一个随意、不完美的瞬间。背景是一个脏乱的房屋地下室,身后有人在开派对。照片具有低光宝丽来摄影的真实外观,带有动态模糊、刺眼的闪光灯、颗粒感和真实派对快照中典型的不佳构图。`,
+      tags: ["宝丽来", "派对", "90年代", "复古"],
+      source: "@Arminn_Ai",
+      previewImage: "https://pbs.twimg.com/media/G5o8EfRXQAAxv0R?format=jpg&name=medium",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "1:1" },
+    },
+    {
+      id: "self-portrait-painting",
+      title: "画家自画像",
+      titleEn: "Artist Self-Portrait",
+      description: "艺术家正在画自己逼真的自画像",
+      prompt: `一张专业的、电影般的照片(不是数字艺术或绘画),捕捉到一位艺术家,她/他具有与上传的参考照片相同的面部特征,这位艺术家正在画架上画她/他逼真的自画像。她/他手持一支精细的画笔靠近脸颊,站在画架前。`,
+      tags: ["艺术家", "自画像", "创意", "绘画"],
+      source: "@ZaraIrahh",
+      previewImage: "https://pbs.twimg.com/media/G5i9ovQa8AAPk3A?format=jpg&name=medium",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+    },
+    {
+      id: "kodak-film-portrait",
+      title: "柯达胶片写真",
+      titleEn: "Kodak Film Portrait",
+      description: "创建柯达Portra 400胶片风格的情绪化人像",
+      prompt: `保持上传图片中人物的面部特征完全一致。
+风格:一张使用柯达Portra 400胶片拍摄的电影感、情绪化人像。
+场景:黄金时段(日落时分)的城市街边咖啡馆窗边。温暖、怀旧的光线打在脸的一侧。
+氛围:应用微妙的胶片颗粒和柔焦,营造出梦幻、有故事感的氛围。
+动作:主体略微移开视线,不看镜头,手持咖啡杯,表情轻松、自然。
+细节:高画质,有景深,背景是散景的城市灯光。`,
+      tags: ["柯达", "胶片", "咖啡馆", "情绪"],
+      source: "Wechat@01Founder",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/film_portrait.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+    },
+    {
+      id: "vintage-nokia-phone",
+      title: "复古诺基亚手机Y2K风格",
+      titleEn: "Vintage Nokia Phone Y2K Style",
+      description: "照片显示在复古诺基亚手机屏幕上,千禧年Y2K风格",
+      prompt: `这是一张抓拍的、略微倾斜的复古诺基亚手机特写(经典直板造型,例如 6610 或类似的早期彩屏机型),手机在画面中随意地呈对角线放置。低分辨率的发光 LCD 屏幕占据了构图的主导地位,填满了大部分视野。周围坚固的塑料外壳和物理 T9 键盘/导航键的顶部区域仅部分可见,并在画面边缘被裁剪掉。
+
+屏幕内容:像素化的屏幕上显示着一个实时的"相机预览"界面:
+
+照片内容:附带照片中的人物经过转换,身穿明显的千禧年 Y2K 流行时装(例如闪亮的金属面料、天鹅绒运动装、水钻细节或层叠网眼织物)。整个场景呈现出浓重的早期拍照手机美学:明显的像素网格(纱窗效应)、有限且略微褪色的调色板,以及块状的压缩伪影。
+
+复古 UI 叠加:覆盖在照片视图之上的是低像素、单色的诺基亚用户界面元素。
+
+屏幕顶部边缘:像素化的信号强度条(左)、"Camera"文字(中)、块状电池图标(右)。
+
+屏幕底部角落:块状像素字体的软键(Soft-key)标签,左侧显示"Options"(选项),右侧显示"Back"(返回)。
+
+氛围与光影:屏幕发出特有的绿蓝色 LCD 背光色调,微弱的光线投射在周围的塑料边框上。整体氛围怀旧、具有互动感,且呈现出真实的低保真(Lo-fi)科技感。
+
+参数设置:
+比例:4:5 竖幅
+相机视角:复古手机屏幕微距特写,手持视角
+屏幕模拟:早期 CSTN 或 TFT LCD 屏幕,可见像素颗粒,特有的绿色色偏
+UI 元素:复古低分辨率单色像素图标和块状文字覆盖
+内容变换:将人物服装替换为 Y2K 千禧年流行风格
+调色风格:低饱和度冷色调,数字噪点,颜色抖动伪影,屏幕荧光`,
+      tags: ["诺基亚", "Y2K", "千禧年", "复古"],
+      source: "@op7418",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/vintage_nokia_phone.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "4:5" },
+    },
+    {
+      id: "toriyama-style",
+      title: "鸟山明风格",
+      titleEn: "Toriyama Akira Style",
+      description: "转换为鸟山明漫画风格",
+      prompt: `转成鸟山明风格`,
+      tags: ["鸟山明", "龙珠", "漫画", "风格转换"],
+      source: "Official",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/toriyama.jpeg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "1:1" },
+    },
+    {
+      id: "anime-fisheye-selfie",
+      title: "与动漫角色鱼眼自拍",
+      titleEn: "Anime Character Fisheye Selfie",
+      description: "与动漫角色的超广角鱼眼自拍照",
+      prompt: `9/16 垂直格式鱼眼自拍,上传照片人物与[Doraemon, Naruto, Nobita, Satoru Gojo, Sung Jin, who is Ash from Pokémon]合照自拍。都以傻傻的、夸张的表情微笑。设置在一个小而明亮的客厅中,白调。高相机角度。极端鱼眼扭曲。现实的、电影照明将动漫角色与风格化现实整合。`,
+      tags: ["鱼眼", "动漫", "自拍", "创意"],
+      source: "@MehdiSharifi",
+      previewImage: "https://pbs.twimg.com/media/G6Nw8foXoAAiqOo.jpg?format=jpg&name=large",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "9:16" },
+    },
+    {
+      id: "fashion-portrait-collage",
+      title: "时尚人像拼贴大片",
+      titleEn: "Fashion Portrait Collage",
+      description: "创作独特的时尚人像拼贴大片",
+      prompt: `一、总体目标
+1 功能描述:根据用户上传的人物参考图,提取人物气质、妆容风格、光线和色彩特征,创作一张独一无二的时尚人像拼贴大片。
+2 差异要求:保留参考人物的五官结构与整体气质,不直接临摹原图,妆容和构图在同一风格体系中做创意变化。
+
+二、输入参考图要求
+1 参考内容:清晰的正脸或三分之二侧脸人物照片,可看清五官、肤质与大致光线氛围。
+2 提取要点:从参考图中读取肤色、妆容浓淡、主色调、光线方向、人物气质和服饰配色。
+
+三、画面构图与输出形式
+1 主画面:生成人物面部超近景或近景,头部和肩部占据画面大部分空间,视线可以参考原图气质设计。
+2 拼贴结构:右侧或一角增加多张小图拼贴,可包含侧脸特写、手部特写、局部妆容特写等,形成杂志排版感。
+3 背景方式:保持背景简洁干净,以纯色或轻微明度过渡为主,突出人物与妆容。
+
+四、文字与图形设计
+1 标题文字:画面上方放置大号杂志标题,字形简洁有力量,保持居中或上中对齐
+2 副标题与小字:在画面一侧或底部添加几行小字,内容可以是主题词、人物名、日期,排列整齐,字号统一
+3 几何图形:在人物周围加入细线条、窄矩形色块或半透明色块,与文字结合使用,增加平面构成感
+
+五、风格继承规则
+1 色彩继承:整体色调、明暗对比、冷暖气质尽量贴合参考图风格,主色来自参考图中最显眼的妆容或服饰颜色。
+2 光线继承:参考原图光线方向和柔和程度,若原图是柔光则保持柔光质感,若原图对比度较强则保留一定硬朗感。
+3 妆容继承:根据参考图的妆容特点(清透、浓烈、实验性、自然等)保持同一风格等级,再在眼妆、腮红、唇妆中做细节变化。
+4 氛围继承:延续参考图的情绪氛围,例如冷淡感、甜美感、叛逆感、神秘感等,在表情与姿态上呼应。
+
+六、创意变化规则
+1 妆容变化:在参考风格基础上增加局部夸张处理,例如扩大腮红范围、强化唇部晕染、增加雀斑或高光点。
+2 构图变化:可以调整脸部角度、裁切范围和小图拼贴位置,让每次生成都具有不同构图。
+3 配饰变化:在颈部、耳部或手部加入简洁有设计感的饰品,与主色调呼应但不完全复制参考图。
+4 细节手势:增加触碰嘴唇、脸颊、眼下等手部动作,使画面更具故事感和参与感。
+
+七、整体质感与后期风格
+1 清晰度:保持皮肤毛孔和细节可见,避免过度磨皮,但适当柔化非焦点区域。
+2 色调处理:整体色调统一,适度降低杂乱颜色,只强化主色和少数点缀色。
+3 情绪表现:根据参考图的气质,控制表情和眼神的强度,让画面既保留原本风格,又有独立个性。
+
+参考用户上传的人物照片,按以上规则自动读取图像风格并进行创作。`,
+      tags: ["时尚", "拼贴", "杂志", "创意"],
+      source: "@qisi_ai",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/fashion_portrait_collage.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+    },
+    {
+      id: "1990s-camera-portrait",
+      title: "1990年代相机肖像",
+      titleEn: "1990s Camera Portrait",
+      description: "1990年代风格相机拍摄的肖像转换",
+      prompt: `不改变她原来的脸,创建一个美丽的年轻女性的肖像,具有瓷白皮肤,用1990s风格的相机捕捉,使用直接前闪光。她凌乱的深棕色头发扎起来,摆出平静却调皮的微笑。她穿着现代的超大奶油色毛衣。背景是深白色的墙壁,覆盖着美学杂志海报和贴纸,唤起昏暗照明下舒适的卧室或个人房间氛围。`,
+      tags: ["90年代", "相机", "复古", "卧室"],
+      source: "@ZaraIrahh",
+      previewImage: "https://pbs.twimg.com/media/G4JuPtGWQAACxHr.jpg?format=jpg&name=large",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+    },
   ],
 };

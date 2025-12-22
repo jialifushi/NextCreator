@@ -52,5 +52,35 @@ export const ecommerceCategory: PromptCategory = {
       previewImage: "https://pbs.twimg.com/media/G63UHDYWoAAD_Hm?format=jpg&name=medium",
       nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
     },
+    {
+      id: "ecommerce-model-tryon",
+      title: "电商模特试穿",
+      titleEn: "E-commerce Model Try-On",
+      description: "将服装合成到模特身上用于电商展示",
+      prompt: `使用图1(服装)和图2(模特),创建一张超现实的全身时尚照片,让模特穿着这件服装。
+关键合身细节:[T恤/夹克]必须自然地垂在模特身上,贴合其姿势并产生逼真的褶皱。
+高保真保留:极其精确地保留图1中的原始面料质感、颜色和任何标志。
+无缝融合:通过完美匹配环境光、色温和阴影方向,将服装融入图2中。
+摄影风格:干净的电商产品画册(Lookbook)风格,使用佳能EOS R5相机和50mm f/1.8镜头拍摄,呈现自然、专业的外观。`,
+      tags: ["电商", "模特", "试穿", "服装"],
+      source: "Wechat@01Founder",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/ecommerce_model.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+    },
+    {
+      id: "pro-product-photography",
+      title: "专业电商商品图",
+      titleEn: "Professional Product Photography",
+      description: "将产品转换为高端电商产品图",
+      prompt: `识别上传照片中的主要产品(自动移除任何手持它的手或杂乱的背景细节),并将其重新创建为一张高端电商产品图。
+主体分离:干净地提取产品,完全移除任何手指、手或杂物。
+背景:将产品放置在纯白色的影棚背景(RGB 255, 255, 255)上,底部带有微妙、自然的接触阴影,使其看起来稳固。
+灯光:使用柔和的商业影棚灯光来凸显产品的质感和材质。确保光照均匀,没有刺眼的强光。
+修图:自动修复任何镜头畸变,提高清晰度,并进行色彩校正,使产品看起来崭新且专业。`,
+      tags: ["产品", "电商", "摄影", "白底"],
+      source: "Wechat@01Founder",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/product_photography.png",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "1:1" },
+    },
   ],
 };

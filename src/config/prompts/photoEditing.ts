@@ -41,5 +41,16 @@ export const photoEditingCategory: PromptCategory = {
       previewImage: "https://pbs.twimg.com/media/G673aBCWUAAFUGn?format=jpg&name=900x900",
       nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
     },
+    {
+      id: "upscale-4k",
+      title: "提高分辨率",
+      titleEn: "Upscale to 4K",
+      description: "将图片升级到4K分辨率",
+      prompt: `将此图片升级到4K分辨率。`,
+      tags: ["提高分辨率", "4K", "画质", "增强"],
+      source: "@MehdiSharifi",
+      previewImage: "https://pbs.twimg.com/media/G6WypOCW4AANo7H.jpg?format=jpg&name=large",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "1:1" },
+    },
   ],
 };

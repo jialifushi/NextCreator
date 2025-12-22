@@ -86,5 +86,61 @@ Each step must include what to do, product TYPE and key INGREDIENTS to look for,
       previewImage: "https://pbs.twimg.com/media/G7QJQpOXEAAqAP1?format=jpg&name=large",
       nodeTemplate: { requiresImageInput: true, generatorType: "fast", aspectRatio: "1:1" },
     },
+    {
+      id: "line-sticker-pack",
+      title: "LINE风格表情包",
+      titleEn: "LINE Style Sticker Pack",
+      description: "生成Q版LINE风格半身像表情包",
+      prompt: `为我生成图中角色的绘制 Q 版的,LINE 风格的半身像表情包,注意头饰要正确
+彩色手绘风格,使用 4x6 布局,涵盖各种各样的常用聊天语句,或是一些有关的娱乐 meme
+其他需求:不要原图复制。所有标注为手写简体中文。
+生成的图片需为 4K 分辨率 16:9`,
+      tags: ["LINE", "表情包", "Q版", "聊天"],
+      source: "LINUX DO@heiyub",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/q_version_meme_pack.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
+    },
+    {
+      id: "24-emoji-pack",
+      title: "24格表情包制作器",
+      titleEn: "24 Emoji Pack Maker",
+      description: "生成24种不同表情的Q版表情包",
+      prompt: `A 4K resolution, 16:9 image featuring a character sheet with a 4x6 grid layout. The style is cute Q-version (Chibi) anime art, resembling LINE stickers, with half-body portraits. white backgroud.
+Subject: The character from the reference image. Please redesign the poses creatively instead of copying the original image directly. Crucial: Ensure the character's headwear and accessories are drawn correctly and consistently.
+Expressions and Actions:
+第一排:
+1.早安: 面带灿烂的笑容,举起左手挥手打招呼,充满活力。
+2.谢谢: 闭着眼睛,双手乖巧地放在身前,身体微微前倾鞠躬,显得非常礼貌和感激。
+3.疑惑: 歪着头,睁大眼睛一脸茫然,头顶周围冒出几个问号。
+4.哈哈哈: 闭着眼张嘴大笑,肩膀似乎在抖动,周围有笑声符号,显得非常开心。
+5.呜呜呜: 双手握拳放在胸口,两条宽面条泪水直流,张大嘴巴痛哭,看起来很委屈。
+6.晚安: 戴趴在枕头上睡着了,鼻子上还吹着一个鼻涕泡,神态安详。
+第二排:
+7. 好的: 俏皮地眨了一只眼(Wink),竖起右手的大拇指,表示赞同或确认。
+8. 不要: 双手在胸前交叉成X型,眼神冷淡地看向一边,表示坚决的拒绝。
+9. 震惊: 脸色发青(线条阴影),双眼翻白失去高光,嘴巴张成圆形,受到极度惊吓。
+10. 生气: 咬牙切齿,眉头紧锁,周围冒着火光和怒气符号,看起来怒火中烧。
+11. 吃瓜: 手里捧着一片西瓜在吃,眼神向前看,一副"看热闹不嫌事大"的旁观者神态。
+12. 害羞: 满脸通红,双手捂住嘴巴,眼神羞涩地看向旁边,显得很不好意思。
+第三排:
+13. 哼: 扭过头去不看人,闭着眼吐出一口气,一副傲娇、不屑或生闷气的样子。
+14. 观察: 手里拿着一个巨大的放大镜放在右眼前,瞪大眼睛仔细查看着什么。
+15. 有点意思: 单手托着下巴,眼神深邃,嘴角露出一抹玩味的微笑,似乎发现了有趣的事情。
+16. 盯~: 变成了简笔画的"豆豆眼",嘴巴抿成一条线,面无表情,大脑一片空白。
+17. 无语: 额头挂着一滴巨大的冷汗,脸色阴沉(蓝色阴影),眼神呆滞,表示极度无奈。
+18. 加油: 双手各挥舞一面红色小旗子,张嘴欢呼,充满激情地为他人应援。
+第四排:
+19. 暗中观察: 躲在一堵墙后面,只探出半个脑袋和一只手,眼神犀利地窥视。
+20. 计划通: 露出阴险得逞的坏笑,眼神犀利(甚至有反光特效),仿佛一切尽在掌握之中。
+21. 累了: 像一滩液体一样瘫软在地上,眼神涣散,似乎魂都丢了,精疲力尽。
+22. 赞: 双眼变成了金色的星星,双手握在胸前,一脸崇拜和兴奋的样子。
+23. 拜拜: 背对镜头,右手举过头顶向后挥手,只留下一个潇洒的背影。
+24. 退下: 戴着黑色墨镜,单手向外挥动,神情冷酷高傲,像大佬一样屏退左右。
+Details: All text annotations and sound effects must be in handwritten Simplified Chinese. The illustrations should have clean outlines and flat colors typical of sticker packs.`,
+      tags: ["表情包", "24格", "Q版", "全面"],
+      source: "@Moeary",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/chibi_sticker_pack.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
+    },
   ],
 };

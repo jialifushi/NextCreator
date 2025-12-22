@@ -24,5 +24,19 @@ Overall Style: Apply a consistent Modern Minimalist style with warm oak wood flo
       previewImage: "https://github.com/user-attachments/assets/cf6d0304-60b6-4262-b4a1-08571f2c491e",
       nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
     },
+    {
+      id: "furniture-preview",
+      title: "家具软装预览",
+      titleEn: "Furniture Preview",
+      description: "可视化房间配置家具后的效果",
+      prompt: `将图2(米色沙发)合成到图1(客厅)中。
+透视匹配:将沙发靠着客厅的主背景墙放置。调整其透视和比例,使其在房间现有的几何结构中看起来逼真。
+光照融合:根据客厅窗户的光源计算光线,并在地板上投射出沙发逼真的阴影。调整沙发的亮度和色温,以匹配房间的环境光。
+风格:保持房间的其余部分完全不变。不要改变墙壁或窗户。`,
+      tags: ["家具", "软装", "预览", "室内"],
+      source: "Wechat@01Founder",
+      previewImage: "https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/images/furniture_preview.jpg",
+      nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
+    },
   ],
 };

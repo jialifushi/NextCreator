@@ -123,7 +123,7 @@ docker-compose up -d
 
 ## 致谢
 
-- [Nanobanana 提示词](https://github.com/ZeroLu/awesome-nanobanana-pro) - 本项目的内置提示词参照该仓库,感谢项目作者的整理与各个提示词的贡献者。
+- [awesome-nanobanana-pro](https://github.com/ZeroLu/awesome-nanobanana-pro) & [banana-prompt-quicker](https://github.com/glidea/banana-prompt-quicker) - 本项目的内置提示词参照两个仓库,感谢项目作者的整理与各个提示词的贡献者。
 
 ## 许可证
 
