@@ -3,7 +3,7 @@
  */
 
 export { geminiImageProvider, GeminiImageProvider } from "./gemini";
+export { dalleImageProvider, DalleImageProvider } from "./dalle";
 
 // 未来可以在这里添加更多提供商
-// export { dalleImageProvider, DalleImageProvider } from "./dalle";
 // export { tongYiImageProvider, TongYiImageProvider } from "./tongyi";

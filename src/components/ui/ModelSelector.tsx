@@ -41,10 +41,14 @@ export function ModelSelector({
   // 检查是否是自定义模型
   const isCustomModel = !options.some((opt) => opt.value === value);
 
-  // 获取显示的模型名称
+  // 获取显示的模型名称（包含真实模型名）
   const getDisplayName = () => {
     const preset = options.find((opt) => opt.value === value);
-    return preset ? preset.label : value;
+    if (preset) {
+      // 如果 label 和 value 相同，只显示一个
+      return preset.label === preset.value ? preset.label : `${preset.label} (${preset.value})`;
+    }
+    return value;
   };
 
   // 打开弹窗
@@ -238,7 +242,12 @@ function ModelSelectorModal({
                 `}
                 onClick={() => handleSelectPreset(opt.value)}
               >
-                <span>{opt.label}</span>
+                <span className="flex flex-col items-start">
+                  <span>{opt.label}</span>
+                  {opt.label !== opt.value && (
+                    <span className="text-xs text-base-content/50">{opt.value}</span>
+                  )}
+                </span>
                 {value === opt.value && <Check className="w-4 h-4" />}
               </button>
             ))}

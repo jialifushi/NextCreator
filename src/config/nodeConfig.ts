@@ -8,6 +8,7 @@ import {
   Presentation,
   MessageSquareText,
   FileUp,
+  Palette,
 } from "lucide-react";
 import type { NodeCategory } from "@/types";
 
@@ -109,6 +110,21 @@ export const nodeCategories: NodeCategory[] = [
         inputs: ["prompt", "image"],
         outputs: ["video"],
       },
+      {
+        type: "dalleGeneratorNode",
+        label: "DALL-E 绘图",
+        description: "OpenAI DALL-E 图片生成",
+        icon: "Palette",
+        defaultData: {
+          label: "DALL-E 绘图",
+          model: "dall-e-3",
+          aspectRatio: "1:1",
+          quality: "standard",
+          status: "idle",
+        },
+        inputs: ["prompt", "image"],
+        outputs: ["image"],
+      },
     ],
   },
   {
@@ -177,6 +193,7 @@ export const nodeIconMap: Record<string, React.ComponentType<{ className?: strin
   Presentation,
   MessageSquareText,
   FileUp,
+  Palette,
 };
 
 // 图标颜色映射
@@ -190,4 +207,5 @@ export const nodeIconColors: Record<string, string> = {
   Presentation: "bg-emerald-500/10 text-emerald-500",
   MessageSquareText: "bg-teal-500/10 text-teal-500",
   FileUp: "bg-orange-500/10 text-orange-500",
+  Palette: "bg-pink-500/10 text-pink-500",
 };

@@ -3,12 +3,14 @@ mod gemini;
 mod ocr_inpaint;
 mod llm;
 mod video;
+mod dalle;
 
 use storage::*;
 use gemini::*;
 use ocr_inpaint::*;
 use llm::*;
 use video::*;
+use dalle::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -39,7 +41,9 @@ pub fn run() {
             // 视频服务代理命令
             video_create_task,
             video_get_status,
-            video_get_content
+            video_get_content,
+            // DALL-E 图片生成命令
+            dalle_generate_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

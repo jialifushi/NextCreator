@@ -3,7 +3,7 @@
  */
 
 import { imageGenerationRegistry } from "./registry";
-import { geminiImageProvider } from "./providers";
+import { geminiImageProvider, dalleImageProvider } from "./providers";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type {
   ImageGenerationRequest,
@@ -19,8 +19,10 @@ export function initializeImageGenerationProviders(): void {
   // 注册 Gemini 提供商
   imageGenerationRegistry.register(geminiImageProvider);
 
+  // 注册 DALL-E 提供商（OpenAI Images API 格式）
+  imageGenerationRegistry.register(dalleImageProvider);
+
   // 未来可以在这里注册更多提供商
-  // imageGenerationRegistry.register(dalleImageProvider);
   // imageGenerationRegistry.register(tongYiImageProvider);
 
   console.log(
