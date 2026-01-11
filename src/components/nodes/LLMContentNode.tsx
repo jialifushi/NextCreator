@@ -133,6 +133,7 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
       updateNodeDataWithCanvas(id, {
         status: "error",
         error: "请连接提示词节点、文件上传节点或图片输入节点",
+        errorDetails: undefined,
       });
       return;
     }
@@ -179,12 +180,14 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
         updateNodeDataWithCanvas(id, {
           status: "error",
           error: "未返回内容",
+          errorDetails: undefined,
         });
       }
     } catch {
       updateNodeDataWithCanvas(id, {
         status: "error",
         error: "生成失败",
+        errorDetails: undefined,
       });
     }
   }, [id, data.model, data.systemPrompt, data.temperature, data.maxTokens, updateNodeDataWithCanvas, getConnectedInputDataAsync]);

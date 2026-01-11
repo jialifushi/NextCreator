@@ -174,6 +174,26 @@ export class GeminiImageProvider implements ImageGenerationProvider {
       };
     }
 
+    // 检查是否有图片数据
+    if (!result.imageData) {
+      return {
+        error: "API 返回成功但未包含图片数据",
+        text: result.text,
+        errorDetails: {
+          name: "EmptyImageData",
+          message: "API 返回成功但未包含图片数据",
+          timestamp: new Date().toISOString(),
+          model: request.model,
+          provider: config.name,
+          responseBody: {
+            success: result.success,
+            hasImageData: !!result.imageData,
+            text: result.text,
+          },
+        },
+      };
+    }
+
     return {
       imageData: result.imageData,
       text: result.text,

@@ -135,6 +135,7 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
       updateNodeData<VideoGeneratorNodeData>(id, {
         status: "error",
         error: "请连接提示词节点",
+        errorDetails: undefined,
       });
       return;
     }
@@ -143,6 +144,7 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
       updateNodeData<VideoGeneratorNodeData>(id, {
         status: "error",
         error: "画布未初始化",
+        errorDetails: undefined,
       });
       return;
     }
@@ -194,6 +196,7 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
       updateNodeData<VideoGeneratorNodeData>(id, {
         status: "error",
         error: "生成失败",
+        errorDetails: undefined,
         taskStage: "failed",
       });
     }

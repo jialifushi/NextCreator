@@ -167,6 +167,27 @@ export class DalleImageProvider implements ImageGenerationProvider {
       };
     }
 
+    // 检查是否有图片数据
+    if (!result.imageData) {
+      return {
+        error: "API 返回成功但未包含图片数据",
+        errorDetails: {
+          name: "EmptyImageData",
+          message: "API 返回成功但未包含图片数据",
+          timestamp: new Date().toISOString(),
+          model: request.model,
+          provider: config.name,
+          requestUrl: `${config.baseUrl}/v1/images/generations`,
+          responseBody: {
+            success: result.success,
+            imageUrl: result.imageUrl,
+            revisedPrompt: result.revisedPrompt,
+            hasImageData: !!result.imageData,
+          },
+        },
+      };
+    }
+
     return {
       imageData: result.imageData,
       metadata: {

@@ -141,6 +141,7 @@ function ImageGeneratorBase({
       updateNodeDataWithCanvas(id, {
         status: "error",
         error: "请连接提示词节点",
+        errorDetails: undefined,
       });
       return;
     }
@@ -256,12 +257,14 @@ function ImageGeneratorBase({
         updateNodeDataWithCanvas(id, {
           status: "error",
           error: "未返回图片数据",
+          errorDetails: undefined,
         });
       }
     } catch {
       updateNodeDataWithCanvas(id, {
         status: "error",
         error: "生成失败",
+        errorDetails: undefined,
       });
     }
   }, [id, model, data.aspectRatio, data.imageSize, isPro, updateNodeDataWithCanvas, getConnectedInputDataAsync, getConnectedImagesWithInfo]);

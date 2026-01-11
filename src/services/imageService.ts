@@ -160,7 +160,7 @@ async function invokeGemini(params: TauriGeminiParams, provider?: { name: string
 export async function generateImage(
   params: ImageGenerationParams,
   nodeType: ImageNodeType,
-  abortSignal?: AbortSignal
+  _abortSignal?: AbortSignal
 ): Promise<GenerationResponse> {
   try {
     const provider = getProviderConfig(nodeType);
@@ -191,7 +191,7 @@ export async function generateImage(
 export async function editImage(
   params: ImageEditParams,
   nodeType: ImageNodeType,
-  abortSignal?: AbortSignal
+  _abortSignal?: AbortSignal
 ): Promise<GenerationResponse> {
   console.log("[imageService] editImage called, images count:", params.inputImages?.length || 0);
 

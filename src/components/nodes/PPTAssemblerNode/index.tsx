@@ -233,6 +233,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
         error: `OCR 服务连接失败: ${servicesCheck.ocrMessage}`,
+        errorDetails: undefined,
       });
       isProcessingRef.current = false;
       abortControllerRef.current = null;
@@ -243,6 +244,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
         error: `IOPaint 服务连接失败: ${servicesCheck.inpaintMessage}`,
+        errorDetails: undefined,
       });
       isProcessingRef.current = false;
       abortControllerRef.current = null;
@@ -396,6 +398,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
           pages: updatedPages,
           status: "error",
           error: `第 ${page.pageNumber} 页处理失败: ${errorMessage}`,
+          errorDetails: undefined,
         });
 
         isProcessingRef.current = false;
@@ -563,6 +566,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
         error: error instanceof Error ? error.message : "导出失败",
+        errorDetails: undefined,
       });
     }
   }, [id, data.pages, getPPTTitle, updateNodeData]);
@@ -575,6 +579,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
         error: "请先完成所有页面的背景处理",
+        errorDetails: undefined,
       });
       return;
     }
@@ -607,6 +612,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
         error: error instanceof Error ? error.message : "导出失败",
+        errorDetails: undefined,
       });
     }
   }, [id, data.pages, getPPTTitle, updateNodeData]);
