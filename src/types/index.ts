@@ -224,6 +224,17 @@ export interface NodeProviderMapping {
   llmContent?: string;          // LLM 内容生成节点使用的供应商 ID
 }
 
+// 节点类型允许的协议映射
+export const NODE_ALLOWED_PROTOCOLS: Record<keyof NodeProviderMapping, ProviderProtocol[]> = {
+  imageGeneratorPro: ["google"],
+  imageGeneratorFast: ["google"],
+  dalleGenerator: ["openai"],
+  fluxGenerator: ["openai"],
+  videoGenerator: ["openai"],
+  llm: ["google", "openai", "claude"],
+  llmContent: ["google", "openai", "claude"],
+};
+
 // 应用设置
 export interface AppSettings {
   providers: Provider[];              // 供应商列表

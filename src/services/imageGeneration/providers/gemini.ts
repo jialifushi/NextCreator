@@ -96,7 +96,7 @@ export class GeminiImageProvider implements ImageGenerationProvider {
    * 构建 Tauri 后端请求参数
    */
   buildTauriParams(request: ImageGenerationRequest, config: ProviderConfig) {
-    const apiBaseUrl = `${config.baseUrl.replace(/\/+$/, "")}/v1beta`;
+    const apiBaseUrl = config.baseUrl.replace(/\/+$/, "");
 
     return {
       baseUrl: apiBaseUrl,

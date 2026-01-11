@@ -78,19 +78,7 @@ function getCommandByProtocol(protocol: string): string {
   }
 }
 
-// 根据协议获取正确的 baseUrl
-function getBaseUrlByProtocol(baseUrl: string, protocol: string): string {
-  const cleanUrl = baseUrl.replace(/\/+$/, "");
-  switch (protocol) {
-    case "google":
-      return cleanUrl + "/v1beta";
-    case "openai":
-    case "claude":
-      return cleanUrl;  // OpenAI 和 Claude 的 Rust 后端会自动添加 /v1
-    default:
-      return cleanUrl + "/v1beta";
-  }
-}
+
 
 // 构建详细错误信息
 function buildErrorDetails(
@@ -131,14 +119,14 @@ async function invokeLLMByProtocol(params: TauriLLMParams, provider: Provider): 
 
   console.log(`[llmService] invokeLLMByProtocol called, protocol: ${protocol}, command: ${command}`);
 
-  // 根据协议构建完整的请求 URL
+  // 根据协议构建完整的请求 URL（用于错误诊断）
   let fullRequestUrl = params.baseUrl;
   if (protocol === "openai") {
     fullRequestUrl = `${params.baseUrl}/v1/chat/completions`;
   } else if (protocol === "claude") {
     fullRequestUrl = `${params.baseUrl}/v1/messages`;
   } else if (protocol === "google") {
-    fullRequestUrl = `${params.baseUrl}/models/${params.model}:generateContent`;
+    fullRequestUrl = `${params.baseUrl}/v1beta/models/${params.model}:generateContent`;
   }
 
   // 构建完整的请求体（用于错误诊断）
@@ -194,7 +182,7 @@ export async function generateText(params: LLMGenerationParams): Promise<LLMResp
   try {
     const provider = getProviderConfig("llm");
 
-    const baseUrl = getBaseUrlByProtocol(provider.baseUrl, provider.protocol || "google");
+    const baseUrl = provider.baseUrl.replace(/\/+$/, "");
     const requestParams: TauriLLMParams = {
       baseUrl,
       apiKey: provider.apiKey,
@@ -224,7 +212,7 @@ export async function generateLLMContent(params: LLMGenerationParams): Promise<L
   try {
     const provider = getProviderConfig("llmContent");
 
-    const baseUrl = getBaseUrlByProtocol(provider.baseUrl, provider.protocol || "google");
+    const baseUrl = provider.baseUrl.replace(/\/+$/, "");
     const requestParams: TauriLLMParams = {
       baseUrl,
       apiKey: provider.apiKey,

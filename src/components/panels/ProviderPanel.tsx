@@ -5,6 +5,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { useModal, getModalAnimationClasses } from "@/hooks/useModal";
+import { NODE_ALLOWED_PROTOCOLS } from "@/types";
 import type { Provider, NodeProviderMapping, ProviderProtocol } from "@/types";
 
 // 协议类型配置
@@ -224,10 +225,12 @@ export function ProviderPanel() {
                       placeholder="未配置"
                       options={[
                         { value: "", label: "未配置" },
-                        ...providers.map((provider) => ({
-                          value: provider.id,
-                          label: `${provider.name} (${protocolLabels[provider.protocol] || "Google"})`,
-                        })),
+                        ...providers
+                          .filter((p) => NODE_ALLOWED_PROTOCOLS[key].includes(p.protocol))
+                          .map((provider) => ({
+                            value: provider.id,
+                            label: `${provider.name} (${protocolLabels[provider.protocol] || "Google"})`,
+                          })),
                       ]}
                       onChange={(value) =>
                         setLocalNodeProviders({
