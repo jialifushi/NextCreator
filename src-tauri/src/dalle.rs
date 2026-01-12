@@ -1,6 +1,50 @@
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+
+/// 从 URL 下载图片并转换为 base64
+async fn download_image_as_base64(client: &Client, url: &str) -> Result<String, String> {
+    println!("[Rust] Downloading image from URL: {}", url);
+    let start_time = std::time::Instant::now();
+
+    let response = client
+        .get(url)
+        .timeout(Duration::from_secs(120))
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                "图片下载超时".to_string()
+            } else if e.is_connect() {
+                "无法连接到图片服务器".to_string()
+            } else {
+                format!("图片下载失败: {}", e)
+            }
+        })?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "图片下载失败，HTTP 状态码: {}",
+            response.status()
+        ));
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("读取图片数据失败: {}", e))?;
+
+    println!(
+        "[Rust] Image downloaded: {} bytes in {:?}",
+        bytes.len(),
+        start_time.elapsed()
+    );
+
+    // 转换为 base64
+    let base64_data = BASE64.encode(&bytes);
+    Ok(base64_data)
+}
 
 // DALL-E API 请求结构
 #[derive(Debug, Serialize)]
@@ -224,12 +268,51 @@ pub async fn dalle_generate_image(params: DalleRequestParams) -> DalleResult {
                 image_data.b64_json.is_some(),
                 image_data.url.is_some()
             );
+
+            // 优先使用 base64 数据
+            if let Some(b64) = &image_data.b64_json {
+                return DalleResult {
+                    success: true,
+                    image_data: Some(b64.clone()),
+                    image_url: image_data.url.clone(),
+                    revised_prompt: image_data.revised_prompt.clone(),
+                    error: None,
+                };
+            }
+
+            // 如果只有 URL，下载图片并转换为 base64
+            if let Some(url) = &image_data.url {
+                println!("[Rust] No base64 data, downloading from URL...");
+                match download_image_as_base64(&client, url).await {
+                    Ok(base64_data) => {
+                        return DalleResult {
+                            success: true,
+                            image_data: Some(base64_data),
+                            image_url: Some(url.clone()),
+                            revised_prompt: image_data.revised_prompt.clone(),
+                            error: None,
+                        };
+                    }
+                    Err(e) => {
+                        println!("[Rust] Failed to download image: {}", e);
+                        return DalleResult {
+                            success: false,
+                            image_data: None,
+                            image_url: Some(url.clone()),
+                            revised_prompt: image_data.revised_prompt.clone(),
+                            error: Some(format!("图片生成成功但下载失败: {}", e)),
+                        };
+                    }
+                }
+            }
+
+            // 既没有 base64 也没有 URL
             return DalleResult {
-                success: true,
-                image_data: image_data.b64_json.clone(),
-                image_url: image_data.url.clone(),
+                success: false,
+                image_data: None,
+                image_url: None,
                 revised_prompt: image_data.revised_prompt.clone(),
-                error: None,
+                error: Some("API 未返回图片数据或 URL".to_string()),
             };
         }
     }

@@ -4,6 +4,7 @@ export { DalleGeneratorNode } from "./DalleGeneratorNode";
 export { FluxGeneratorNode } from "./FluxGeneratorNode";
 export { GptImageGeneratorNode } from "./GptImageGeneratorNode";
 export { DoubaoGeneratorNode } from "./DoubaoGeneratorNode";
+export { ZImageGeneratorNode } from "./ZImageGeneratorNode";
 export { ImageInputNode } from "./ImageInputNode";
 export { VideoGeneratorNode } from "./VideoGeneratorNode";
 export { PPTContentNode } from "./PPTContentNode";
@@ -17,6 +18,7 @@ import { DalleGeneratorNode } from "./DalleGeneratorNode";
 import { FluxGeneratorNode } from "./FluxGeneratorNode";
 import { GptImageGeneratorNode } from "./GptImageGeneratorNode";
 import { DoubaoGeneratorNode } from "./DoubaoGeneratorNode";
+import { ZImageGeneratorNode } from "./ZImageGeneratorNode";
 import { ImageInputNode } from "./ImageInputNode";
 import { VideoGeneratorNode } from "./VideoGeneratorNode";
 import { PPTContentNode } from "./PPTContentNode";
@@ -33,6 +35,7 @@ export const nodeTypes = {
   fluxGeneratorNode: FluxGeneratorNode,
   gptImageGeneratorNode: GptImageGeneratorNode,
   doubaoGeneratorNode: DoubaoGeneratorNode,
+  zImageGeneratorNode: ZImageGeneratorNode,
   imageInputNode: ImageInputNode,
   videoGeneratorNode: VideoGeneratorNode,
   pptContentNode: PPTContentNode,

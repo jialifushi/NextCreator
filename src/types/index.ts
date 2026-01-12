@@ -221,6 +221,7 @@ export interface NodeProviderMapping {
   fluxGenerator?: string;       // Flux 图片节点使用的供应商 ID
   gptImageGenerator?: string;   // GPT Image 图片节点使用的供应商 ID
   doubaoGenerator?: string;     // 豆包图片节点使用的供应商 ID
+  zImageGenerator?: string;     // Z-Image 图片节点使用的供应商 ID
   videoGenerator?: string;      // 视频节点使用的供应商 ID
   llm?: string;                 // PPT 内容生成节点使用的 LLM 供应商 ID
   llmContent?: string;          // LLM 内容生成节点使用的供应商 ID
@@ -234,6 +235,7 @@ export const NODE_ALLOWED_PROTOCOLS: Record<keyof NodeProviderMapping, ProviderP
   fluxGenerator: ["openai"],
   gptImageGenerator: ["openai"],
   doubaoGenerator: ["openai"],
+  zImageGenerator: ["openai"],  // Z-Image 使用 OpenAI DALL-E 格式
   videoGenerator: ["openai"],
   llm: ["google", "openai", "claude"],
   llmContent: ["google", "openai", "claude"],

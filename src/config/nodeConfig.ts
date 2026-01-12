@@ -11,6 +11,7 @@ import {
   Palette,
   Wand2,
   Flame,
+  Box,
 } from "lucide-react";
 import type { NodeCategory } from "@/types";
 
@@ -173,6 +174,21 @@ export const nodeCategories: NodeCategory[] = [
         inputs: ["prompt", "image"],
         outputs: ["image"],
       },
+      {
+        type: "zImageGeneratorNode",
+        label: "Z-Image 绘图",
+        description: "Gitee AI Z-Image 图片生成",
+        icon: "Box",
+        defaultData: {
+          label: "Z-Image 绘图",
+          model: "z-image-turbo",
+          aspectRatio: "1:1",
+          negativePrompt: "",
+          status: "idle",
+        },
+        inputs: ["prompt"],
+        outputs: ["image"],
+      },
     ],
   },
   {
@@ -244,6 +260,7 @@ export const nodeIconMap: Record<string, React.ComponentType<{ className?: strin
   Palette,
   Wand2,
   Flame,
+  Box,
 };
 
 // 图标颜色映射
@@ -260,4 +277,5 @@ export const nodeIconColors: Record<string, string> = {
   Palette: "bg-pink-500/10 text-pink-500",
   Wand2: "bg-violet-500/10 text-violet-500",
   Flame: "bg-cyan-500/10 text-cyan-500",
+  Box: "bg-indigo-500/10 text-indigo-500",
 };
