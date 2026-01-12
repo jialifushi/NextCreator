@@ -263,6 +263,7 @@ function GptImageGeneratorBase({
                         onChange={handleModelChange}
                         variant="primary"
                         allowCustom={true}
+                        modelCategory="imageGenerator"
                     />
 
                     {/* 宽高比选项 */}

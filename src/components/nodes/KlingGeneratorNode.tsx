@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   CircleAlert,
   ImagePlus,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
@@ -23,6 +25,7 @@ import type { VideoTaskStage } from "@/services/videoGeneration";
 import { taskManager } from "@/services/taskManager";
 import { useLoadingDots } from "@/hooks/useLoadingDots";
 import { ErrorDetailModal } from "@/components/ui/ErrorDetailModal";
+import { useCustomModelStore } from "@/stores/customModelStore";
 import type { ErrorDetails } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -696,18 +699,29 @@ function KlingDetailModal({ data, onClose, onUpdateData }: KlingDetailModalProps
   const [isClosing, setIsClosing] = useState(false);
   const [customModel, setCustomModel] = useState("");
 
+  const { addCustomModel, removeCustomModel, getCustomModels } = useCustomModelStore();
+  const customModels = getCustomModels("videoGenerator");
+
   const currentModel = data.model || "kling-v1";
   const currentMode = data.mode || "text2video";
 
-  // 检查是否是自定义模型
-  const isCustomModel = !presetModels.some((m) => m.value === currentModel);
+  // 检查是否是自定义模型（不在预设列表和用户自定义列表中）
+  const isCustomModel = !presetModels.some((m) => m.value === currentModel) && !customModels.includes(currentModel);
 
   // 使用自定义模型
   const handleCustomModelSubmit = () => {
-    if (customModel.trim()) {
-      onUpdateData({ model: customModel.trim() });
+    const trimmed = customModel.trim();
+    if (trimmed) {
+      addCustomModel("videoGenerator", trimmed);
+      onUpdateData({ model: trimmed });
       setCustomModel("");
     }
+  };
+
+  // 删除用户自定义模型
+  const handleRemoveCustomModel = (model: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeCustomModel("videoGenerator", model);
   };
 
   // 进入动画
@@ -779,7 +793,7 @@ function KlingDetailModal({ data, onClose, onUpdateData }: KlingDetailModalProps
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* 模型选择 */}
           <div>
-            <label className="text-sm font-medium text-base-content mb-2 block">模型</label>
+            <label className="text-sm font-medium text-base-content mb-2 block">预设模型</label>
             <div className="flex gap-2">
               {presetModels.map((opt) => (
                 <button
@@ -795,13 +809,52 @@ function KlingDetailModal({ data, onClose, onUpdateData }: KlingDetailModalProps
                 </button>
               ))}
             </div>
+
+            {/* 用户自定义模型列表 */}
+            {customModels.length > 0 && (
+              <div className="mt-3">
+                <label className="text-xs text-base-content/60 mb-1.5 block">我的模型</label>
+                <div className="space-y-1">
+                  {customModels.map((model) => (
+                    <div
+                      key={model}
+                      className={`
+                        w-full px-3 py-2 text-left text-sm rounded-lg
+                        flex items-center justify-between group cursor-pointer
+                        transition-colors
+                        ${currentModel === model
+                          ? "bg-primary/20 text-primary border border-primary/30"
+                          : "bg-base-200 hover:bg-base-300"
+                        }
+                      `}
+                      onClick={() => onUpdateData({ model })}
+                    >
+                      <span className="truncate">{model}</span>
+                      <div className="flex items-center gap-1">
+                        {currentModel === model && <Check className="w-4 h-4" />}
+                        <button
+                          type="button"
+                          className="p-1 rounded hover:bg-error/20 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleRemoveCustomModel(model, e)}
+                          title="删除此模型"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 当前自定义模型显示（如果是临时输入的，不在列表中） */}
             {isCustomModel && (
               <div className="mt-2 px-2 py-1.5 bg-primary/10 rounded-lg text-xs text-primary">
                 当前使用自定义模型: {currentModel}
               </div>
             )}
             <div className="mt-3">
-              <label className="text-xs text-base-content/60 mb-1 block">自定义模型</label>
+              <label className="text-xs text-base-content/60 mb-1 block">添加自定义模型</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -821,7 +874,7 @@ function KlingDetailModal({ data, onClose, onUpdateData }: KlingDetailModalProps
                   onClick={handleCustomModelSubmit}
                   disabled={!customModel.trim()}
                 >
-                  确定
+                  添加
                 </button>
               </div>
             </div>

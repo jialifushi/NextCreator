@@ -353,6 +353,7 @@ function ImageGeneratorBase({
             onChange={handleModelChange}
             variant={isPro ? "primary" : "warning"}
             allowCustom={true}
+            modelCategory="imageGenerator"
           />
 
           {/* 配置选项 */}
