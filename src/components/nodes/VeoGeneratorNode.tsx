@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
-import { downloadVideo, type VideoTaskStage } from "@/services/videoGeneration";
+import type { VideoTaskStage } from "@/services/videoGeneration";
 import { taskManager } from "@/services/taskManager";
 import { useLoadingDots } from "@/hooks/useLoadingDots";
 import { ErrorDetailModal } from "@/components/ui/ErrorDetailModal";
