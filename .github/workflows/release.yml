@@ -70,6 +70,13 @@ jobs:
             - **macOS (Apple Silicon M1/M2/M3)**: `NextCreator_*_aarch64.dmg`
             - **macOS (Intel)**: `NextCreator_*_x64.dmg`
             - **Windows**: `NextCreator_*_x64-setup.exe` 或 `.msi`
+              
+            由于应用未经 Apple 签名，首次打开可能会提示"无法验证开发者"。请在终端执行以下命令解决：
+
+            ```bash
+            xattr -rc "/Applications/NextCreator.app"
+            ```
+            
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
