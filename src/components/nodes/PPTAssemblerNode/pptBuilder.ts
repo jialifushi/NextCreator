@@ -1,6 +1,5 @@
 import PptxGenJS from "pptxgenjs";
-import type { PPTPageData } from "./types";
-import type { ProcessedPage } from "@/services/ocrInpaintService";
+import type { PPTPageData, ProcessedPage } from "./types";
 import { toast } from "@/stores/toastStore";
 
 export interface BuildPPTOptions {

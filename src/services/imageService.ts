@@ -1,25 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ImageGenerationParams, ImageEditParams, GenerationResponse, ProviderProtocol, ErrorDetails } from "@/types";
+import type { ImageGenerationParams, ImageEditParams, GenerationResponse, ErrorDetails } from "@/types";
 import { useSettingsStore } from "@/stores/settingsStore";
 
 // 图片节点类型
 type ImageNodeType = "imageGeneratorPro" | "imageGeneratorFast";
-
-// 根据协议类型获取完整的 API Base URL
-function getApiBaseUrl(baseUrl: string, protocol: ProviderProtocol): string {
-  const cleanBaseUrl = baseUrl.replace(/\/+$/, "");  // 移除末尾斜杠
-
-  switch (protocol) {
-    case "google":
-      return `${cleanBaseUrl}/v1beta`;
-    case "openai":
-      return `${cleanBaseUrl}/v1`;
-    case "claude":
-      return `${cleanBaseUrl}/v1`;
-    default:
-      return `${cleanBaseUrl}/v1beta`;
-  }
-}
 
 // 获取供应商配置
 function getProviderConfig(nodeType: ImageNodeType) {
@@ -165,11 +149,10 @@ export async function generateImage(
   try {
     const provider = getProviderConfig(nodeType);
     const isPro = params.model === "gemini-3-pro-image-preview";
-    const apiBaseUrl = getApiBaseUrl(provider.baseUrl, provider.protocol);
 
     return await invokeGemini(
       {
-        baseUrl: apiBaseUrl,
+        baseUrl: provider.baseUrl,
         apiKey: provider.apiKey,
         model: params.model,
         prompt: params.prompt,
@@ -198,11 +181,10 @@ export async function editImage(
   try {
     const provider = getProviderConfig(nodeType);
     const isPro = params.model === "gemini-3-pro-image-preview";
-    const apiBaseUrl = getApiBaseUrl(provider.baseUrl, provider.protocol);
 
     return await invokeGemini(
       {
-        baseUrl: apiBaseUrl,
+        baseUrl: provider.baseUrl,
         apiKey: provider.apiKey,
         model: params.model,
         prompt: params.prompt,

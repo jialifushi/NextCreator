@@ -285,8 +285,6 @@ export const nodeCategories: NodeCategory[] = [
           pages: [],
           status: "idle",
           exportMode: "image",
-          ocrApiUrl: "http://127.0.0.1:8866",
-          inpaintApiUrl: "http://127.0.0.1:8080",
         },
         inputs: ["results"],
         outputs: [],
