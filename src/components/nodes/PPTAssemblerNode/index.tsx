@@ -268,8 +268,9 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
     const isAnyProcessing = updatedPages.some(
       p => p.processStatus === "detecting" || p.processStatus === "inpainting"
     );
+    const fallbackStep = status === "detecting" || status === "inpainting" ? status : undefined;
     const nextProgressState = isAnyProcessing
-      ? (nextProgress || { current: completedCount, total: updatedPages.length, currentStep: status })
+      ? (nextProgress || { current: completedCount, total: updatedPages.length, currentStep: fallbackStep })
       : null;
 
     updateNodeData<PPTAssemblerNodeData>(id, {

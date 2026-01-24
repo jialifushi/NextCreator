@@ -70,6 +70,7 @@ pub struct DalleRequest {
 }
 
 // DALL-E API 响应结构
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct DalleResponse {
     pub created: Option<i64>,
@@ -84,6 +85,7 @@ pub struct DalleImageData {
     pub revised_prompt: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct DalleError {
     pub message: String,

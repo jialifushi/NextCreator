@@ -55,52 +55,6 @@ const ROUND1_PROMPT: &str = r#"
 请先用代码分析图片，然后输出最终的 JSON 结果。
 "#;
 
-/// Gemini API 请求体
-#[derive(Debug, Serialize)]
-struct GeminiRequest {
-    contents: Vec<Content>,
-    #[serde(rename = "generationConfig")]
-    generation_config: GenerationConfig,
-}
-
-#[derive(Debug, Serialize)]
-struct Content {
-    parts: Vec<Part>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-enum Part {
-    Text { text: String },
-    Image { #[serde(rename = "inlineData")] inline_data: InlineData },
-}
-
-#[derive(Debug, Serialize)]
-struct InlineData {
-    #[serde(rename = "mimeType")]
-    mime_type: String,
-    data: String,
-}
-
-#[derive(Debug, Serialize)]
-struct GenerationConfig {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "responseMimeType")]
-    response_mime_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "responseSchema")]
-    response_schema: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "thinkingConfig")]
-    thinking_config: Option<ThinkingConfig>,
-}
-
-#[derive(Debug, Serialize)]
-struct ThinkingConfig {
-    #[serde(rename = "thinkingBudget")]
-    thinking_budget: i32,
-}
-
 /// Gemini API 响应体
 #[derive(Debug, Deserialize)]
 struct GeminiResponse {

@@ -1077,6 +1077,7 @@ pub async fn kling_create_task(params: KlingCreateParams) -> VideoTaskResult {
         struct KlingErrorResponse {
             error: Option<KlingApiError>,
         }
+        #[allow(dead_code)]
         #[derive(Debug, Deserialize)]
         struct KlingApiError {
             message: Option<String>,
@@ -1242,6 +1243,7 @@ pub async fn kling_get_status(params: KlingStatusParams) -> VideoTaskResult {
     }
 
     // 解析响应
+    #[allow(dead_code)]
     #[derive(Debug, Deserialize)]
     struct KlingStatusResponse {
         task_id: Option<String>,
