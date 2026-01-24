@@ -27,7 +27,7 @@ import {
 import { useFlowStore } from "@/stores/flowStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { PPTAssemblerNodeData, PPTPageData } from "./types";
-import { downloadPPT, downloadScripts, downloadBackgroundPPT } from "./pptBuilder";
+import { downloadPPT, downloadScripts, downloadEditablePPT } from "./pptBuilder";
 import { useLoadingDots } from "@/hooks/useLoadingDots";
 import type { PPTContentNodeData } from "../PPTContentNode/types";
 import { ImagePreviewModal } from "@/components/ui/ImagePreviewModal";
@@ -45,7 +45,7 @@ type PPTAssemblerNode = Node<PPTAssemblerNodeData>;
 // 导出模式选项
 const exportModeOptions = [
   { value: "image", label: "纯图片", icon: ImageIcon, desc: "每页为完整图片" },
-  { value: "background", label: "仅背景", icon: Eraser, desc: "去除文字，保留背景" },
+  { value: "background", label: "可编辑", icon: Eraser, desc: "背景 + 文本框，可编辑" },
 ];
 
 // 标签页类型
@@ -91,8 +91,29 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
   const [showErrorDetail, setShowErrorDetail] = useState(false);
 
   // 处理控制
-  const isProcessingRef = useRef(false);
+  const activeBatchCountRef = useRef(0);
   const stopRequestedRef = useRef(false);
+
+  const isPageProcessed = useCallback((page: PPTPageData) => {
+    return (
+      page.processStatus === "completed" &&
+      !!page.processedBackground &&
+      page.processedTextBoxes !== undefined
+    );
+  }, []);
+
+  const resetPageForProcessing = useCallback((page: PPTPageData): PPTPageData => {
+    return {
+      ...page,
+      processStatus: "detecting",
+      processError: undefined,
+      processedBackground: undefined,
+      processedThumbnail: undefined,
+      processedTextBoxes: undefined,
+      processedWidth: undefined,
+      processedHeight: undefined,
+    };
+  }, []);
 
   // 处理配置面板的打开/关闭动画
   const openPanel = useCallback(() => {
@@ -138,6 +159,9 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
         processStatus: undefined,
         processedBackground: undefined,
         processedThumbnail: undefined,
+        processedTextBoxes: undefined,
+        processedWidth: undefined,
+        processedHeight: undefined,
         processError: undefined,
       }));
 
@@ -194,19 +218,64 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
     };
 
     const latestPages = getLatestPages();
-    const { pageIndex, status, error, backgroundImage } = event;
+    const { pageIndex, status, error, backgroundImage, textBoxes, imageWidth, imageHeight } = event;
+
+    if (stopRequestedRef.current) {
+      return;
+    }
 
     // 立即同步更新状态，确保状态更新顺序正确
     const updatedPages = latestPages.map((p, idx) =>
-      idx === pageIndex ? {
-        ...p,
-        processStatus: status,
-        processError: error,
-        processedBackground: backgroundImage || p.processedBackground,
-      } : p
+      idx === pageIndex ? (() => {
+        const nextPage = {
+          ...p,
+          processStatus: status,
+          processError: error,
+        };
+
+        if (status === "completed") {
+          return {
+            ...nextPage,
+            processedBackground: backgroundImage || p.processedBackground,
+            processedTextBoxes: textBoxes ?? p.processedTextBoxes,
+            processedWidth: imageWidth ?? p.processedWidth,
+            processedHeight: imageHeight ?? p.processedHeight,
+          };
+        }
+
+        if (status === "detecting" || status === "inpainting") {
+          return {
+            ...nextPage,
+            processError: undefined,
+          };
+        }
+
+        return nextPage;
+      })() : p
     );
 
-    updateNodeData<PPTAssemblerNodeData>(id, { pages: updatedPages });
+    const latestNode = useFlowStore.getState().nodes.find(n => n.id === id);
+    const currentProgress = (latestNode?.data as PPTAssemblerNodeData | undefined)?.processingProgress;
+    const completedCount = updatedPages.filter(isPageProcessed).length;
+    const nextProgress = currentProgress
+      ? {
+        ...currentProgress,
+        current: completedCount,
+        currentStep: status === "detecting" || status === "inpainting" ? status : currentProgress.currentStep,
+      }
+      : currentProgress;
+
+    const isAnyProcessing = updatedPages.some(
+      p => p.processStatus === "detecting" || p.processStatus === "inpainting"
+    );
+    const nextProgressState = isAnyProcessing
+      ? (nextProgress || { current: completedCount, total: updatedPages.length, currentStep: status })
+      : null;
+
+    updateNodeData<PPTAssemblerNodeData>(id, {
+      pages: updatedPages,
+      processingProgress: nextProgressState,
+    });
 
     // 如果当前页面完成，自动切换到处理后预览
     if (status === 'completed' && pageIndex === currentPage) {
@@ -229,13 +298,13 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
         console.error("生成缩略图失败:", e);
       });
     }
-  }, [id, updateNodeData, currentPage]);
+  }, [id, updateNodeData, currentPage, isPageProcessed]);
 
-  // 开始背景处理 - 后端批量处理
-  const handleStartProcessing = useCallback(async () => {
-    if (isProcessingRef.current) return;
+  const runProcessing = useCallback(async (targetIndices: number[]) => {
+    if (targetIndices.length === 0) {
+      return;
+    }
 
-    // 检查 LLM 供应商配置
     const provider = getLLMProvider();
     if (!provider) {
       updateNodeData<PPTAssemblerNodeData>(id, {
@@ -250,40 +319,46 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       return (node?.data as PPTAssemblerNodeData)?.pages || [];
     };
 
-    // 获取最新的页面数据
-    const currentPagesFromStore = getLatestPages();
-
-    // 找出需要处理的页面
-    const pagesToProcess = currentPagesFromStore
+    const latestPages = getLatestPages();
+    const targetSet = new Set(targetIndices);
+    const pagesToProcess = latestPages
       .map((p, idx) => ({ page: p, index: idx }))
-      .filter(({ page }) => !(page.processStatus === 'completed' && page.processedBackground));
+      .filter(({ page, index }) => targetSet.has(index) && !isPageProcessed(page));
 
-    if (pagesToProcess.length === 0) {
+    const missingImageIndices = pagesToProcess
+      .filter(({ page }) => !page.image)
+      .map(({ index }) => index);
+
+    if (missingImageIndices.length > 0) {
+      const nextPages = latestPages.map((p, idx) =>
+        missingImageIndices.includes(idx)
+          ? { ...p, processStatus: "error" as const, processError: "缺少页面图片，无法处理" }
+          : p
+      );
+      updateNodeData<PPTAssemblerNodeData>(id, { pages: nextPages });
+    }
+
+    const validPagesToProcess = pagesToProcess.filter(({ page }) => !!page.image);
+    if (validPagesToProcess.length === 0) {
       return;
     }
 
-    isProcessingRef.current = true;
+    activeBatchCountRef.current += 1;
     stopRequestedRef.current = false;
+    const validTargetSet = new Set(validPagesToProcess.map(item => item.index));
 
-    // 标记所有待处理页面
-    const initialPages = currentPagesFromStore.map((p) => {
-      const needsProcessing = !(p.processStatus === 'completed' && p.processedBackground);
-      return {
-        ...p,
-        processStatus: needsProcessing ? 'pending' as const : 'completed' as const,
-        processError: undefined,
-      };
-    });
+    const initialPages = latestPages.map((p, idx) => (
+      validTargetSet.has(idx) ? resetPageForProcessing(p) : p
+    ));
 
     updateNodeData<PPTAssemblerNodeData>(id, {
       status: "processing",
       error: undefined,
       pages: initialPages,
-      processingProgress: { current: 0, total: pagesToProcess.length, currentStep: 'detecting' },
+      processingProgress: { current: initialPages.filter(isPageProcessed).length, total: initialPages.length, currentStep: "detecting" },
     });
 
-    // 构建批量处理输入
-    const batchInput = pagesToProcess.map(({ page, index }) => ({
+    const batchInput = validPagesToProcess.map(({ page, index }) => ({
       pageIndex: index,
       imageData: page.image,
     }));
@@ -295,33 +370,30 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
     };
 
     try {
-      // 调用后端批量处理
       const { cleanup, result } = await processPagesBatch(
         batchInput,
         config,
         handlePageProgress,
         () => {
-          // 处理完成
-          isProcessingRef.current = false;
-          const latestPages = getLatestPages();
-          const hasError = latestPages.some(p => p.processStatus === 'error');
+          activeBatchCountRef.current = Math.max(0, activeBatchCountRef.current - 1);
+          const latestAfter = getLatestPages();
+          const hasError = latestAfter.some(p => p.processStatus === "error");
+          const hasProcessing = latestAfter.some(
+            p => p.processStatus === "detecting" || p.processStatus === "inpainting"
+          );
           updateNodeData<PPTAssemblerNodeData>(id, {
-            status: hasError ? "error" : "ready",
+            status: hasProcessing ? "processing" : hasError ? "error" : "ready",
             error: hasError ? "部分页面处理失败" : undefined,
             processingProgress: null,
           });
         }
       );
 
-      // 保存清理函数
       batchCleanupRef.current = cleanup;
-
-      // 等待处理完成
       await result;
-
     } catch (error) {
       console.error("批量处理失败:", error);
-      isProcessingRef.current = false;
+      activeBatchCountRef.current = Math.max(0, activeBatchCountRef.current - 1);
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
         error: error instanceof Error ? error.message : "批量处理失败",
@@ -330,19 +402,26 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
     } finally {
       batchCleanupRef.current = null;
     }
+  }, [getLLMProvider, handlePageProgress, id, isPageProcessed, resetPageForProcessing, updateNodeData]);
 
-  }, [id, updateNodeData, getLLMProvider, handlePageProgress]);
+  // 开始可编辑处理 - 后端批量处理
+  const handleStartProcessing = useCallback(async () => {
+    const getLatestPages = (): PPTPageData[] => {
+      const node = useFlowStore.getState().nodes.find(n => n.id === id);
+      return (node?.data as PPTAssemblerNodeData)?.pages || [];
+    };
+
+    const latestPages = getLatestPages();
+    const indices = latestPages
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p }) => !isPageProcessed(p))
+      .map(({ idx }) => idx);
+
+    await runProcessing(indices);
+  }, [id, isPageProcessed, runProcessing]);
 
   // 处理单个页面（点击单独开始按钮）- 使用后端批量处理
   const handleProcessSinglePage = useCallback(async (pageIndex: number) => {
-    const provider = getLLMProvider();
-    if (!provider) {
-      updateNodeData<PPTAssemblerNodeData>(id, {
-        error: "请在供应商管理中配置 LLM 供应商",
-      });
-      return;
-    }
-
     const getLatestPages = (): PPTPageData[] => {
       const node = useFlowStore.getState().nodes.find(n => n.id === id);
       return (node?.data as PPTAssemblerNodeData)?.pages || [];
@@ -352,62 +431,32 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
     const page = latestPages[pageIndex];
     if (!page) return;
 
-    // 如果该页面已经在处理中，忽略
-    if (page.processStatus === 'detecting' || page.processStatus === 'inpainting') {
+    if (!page.image) {
+      updateNodeData<PPTAssemblerNodeData>(id, {
+        error: "缺少页面图片，无法处理",
+      });
       return;
     }
 
-    // 只更新该页面状态为待处理
-    const updatedPages = latestPages.map((p, idx) =>
-      idx === pageIndex ? {
-        ...p,
-        processStatus: 'pending' as const,
-        processError: undefined,
-        processedBackground: undefined,
-        processedThumbnail: undefined,
-      } : p
-    );
-    updateNodeData<PPTAssemblerNodeData>(id, {
-      pages: updatedPages,
-      error: undefined,
-    });
-
-    const config = {
-      geminiBaseUrl: provider.baseUrl,
-      geminiApiKey: provider.apiKey,
-      geminiModel: "gemini-3-flash-preview",
-    };
-
-    try {
-      // 调用后端批量处理（只处理单个页面）
-      const { result } = await processPagesBatch(
-        [{ pageIndex, imageData: page.image }],
-        config,
-        handlePageProgress,
-        () => {
-          // 单页处理完成，不需要额外处理
-        }
-      );
-
-      await result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "处理失败";
-      const currentPages = getLatestPages();
-      const errorPages = currentPages.map((p, idx) =>
-        idx === pageIndex ? {
-          ...p,
-          processStatus: 'error' as const,
-          processError: errorMessage,
-        } : p
-      );
-      updateNodeData<PPTAssemblerNodeData>(id, { pages: errorPages });
+    if (page.processStatus === "detecting" || page.processStatus === "inpainting") {
+      return;
     }
-  }, [id, updateNodeData, getLLMProvider, handlePageProgress]);
+
+    // 处理中时允许加入队列，避免阻塞其它重试
+    // 非处理中：先重置页面，再触发处理，确保已完成页面也能重新处理
+    const resetPages = latestPages.map((p, idx) =>
+      idx === pageIndex ? resetPageForProcessing(p) : p
+    );
+    updateNodeData<PPTAssemblerNodeData>(id, { pages: resetPages, error: undefined });
+
+    await runProcessing([pageIndex]);
+  }, [id, resetPageForProcessing, runProcessing, updateNodeData]);
 
   // 停止处理 - 调用后端停止命令
   const handleStopProcessing = useCallback(async () => {
     // 设置停止标志
     stopRequestedRef.current = true;
+    activeBatchCountRef.current = 0;
 
     // 清理事件监听器
     if (batchCleanupRef.current) {
@@ -442,7 +491,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
     });
 
     // 重置处理标志
-    isProcessingRef.current = false;
+    activeBatchCountRef.current = 0;
   }, [id, updateNodeData]);
 
 
@@ -461,7 +510,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       await downloadPPT({
         title,
         pages: data.pages,
-        aspectRatio: "16:9",
+        aspectRatio: data.aspectRatio,
       });
 
       updateNodeData<PPTAssemblerNodeData>(id, {
@@ -474,16 +523,16 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
         errorDetails: undefined,
       });
     }
-  }, [id, data.pages, getPPTTitle, updateNodeData]);
+  }, [id, data.pages, data.aspectRatio, getPPTTitle, updateNodeData, isPageProcessed]);
 
-  // 下载 PPT（仅背景模式）
-  const handleDownloadBackgroundPPT = useCallback(async () => {
+  // 下载 PPT（可编辑模式）
+  const handleDownloadEditablePPT = useCallback(async () => {
     // 检查是否所有页面都已处理
-    const allProcessed = data.pages.every(p => p.processStatus === 'completed' && p.processedBackground);
+    const allProcessed = data.pages.every(isPageProcessed);
     if (!allProcessed) {
       updateNodeData<PPTAssemblerNodeData>(id, {
         status: "error",
-        error: "请先完成所有页面的背景处理",
+        error: "请先完成所有页面的可编辑处理",
         errorDetails: undefined,
       });
       return;
@@ -500,14 +549,16 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
       // 构建处理后的页面数据
       const processedPages = data.pages.map(p => ({
         backgroundImage: p.processedBackground!,
-        textBoxes: [],
+        textBoxes: p.processedTextBoxes || [],
+        sourceWidth: p.processedWidth,
+        sourceHeight: p.processedHeight,
         originalPage: p,
       }));
 
-      await downloadBackgroundPPT({
+      await downloadEditablePPT({
         title,
         pages: processedPages,
-        aspectRatio: "16:9",
+        aspectRatio: data.aspectRatio,
       });
 
       updateNodeData<PPTAssemblerNodeData>(id, {
@@ -520,16 +571,16 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
         errorDetails: undefined,
       });
     }
-  }, [id, data.pages, getPPTTitle, updateNodeData]);
+  }, [id, data.pages, data.aspectRatio, getPPTTitle, updateNodeData]);
 
   // 下载 PPT（根据模式）
   const handleDownloadPPT = useCallback(() => {
     if (data.exportMode === "image") {
       handleDownloadImagePPT();
     } else {
-      handleDownloadBackgroundPPT();
+      handleDownloadEditablePPT();
     }
-  }, [data.exportMode, handleDownloadImagePPT, handleDownloadBackgroundPPT]);
+  }, [data.exportMode, handleDownloadImagePPT, handleDownloadEditablePPT]);
 
   // 下载讲稿
   const handleDownloadScripts = useCallback(async () => {
@@ -545,14 +596,14 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
   const isProcessing = data.status === "processing" || data.status === "generating";
 
   // 计算处理进度统计
-  const processedCount = data.pages.filter(p => p.processStatus === 'completed').length;
+  const processedCount = data.pages.filter(isPageProcessed).length;
   const errorCount = data.pages.filter(p => p.processStatus === 'error').length;
   const pendingCount = data.pages.filter(p => !p.processStatus || p.processStatus === 'pending').length;
 
-  // 检查是否可以下载（仅背景模式需要先处理）
+  // 检查是否可以下载（可编辑模式需要先处理）
   const canDownload = data.exportMode === "image"
     ? data.pages.length > 0
-    : data.pages.every(p => p.processStatus === 'completed' && p.processedBackground);
+    : data.pages.every(isPageProcessed);
 
   return (
     <>
@@ -624,7 +675,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
           <div className="flex items-center justify-between text-xs">
             <span className="text-base-content/60">导出模式</span>
             <span className={`font-medium ${data.exportMode === 'background' ? 'text-secondary' : 'text-primary'}`}>
-              {data.exportMode === 'image' ? '纯图片' : '仅背景'}
+              {data.exportMode === 'image' ? '纯图片' : '可编辑'}
             </span>
           </div>
 
@@ -774,7 +825,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
                   onClick={() => setActiveTab('background')}
                 >
                   <Layers className="w-4 h-4 inline mr-1.5" />
-                  背景处理
+                  可编辑处理
                   {processedCount > 0 && processedCount < data.pages.length && (
                     <span className="ml-1.5 text-xs bg-warning/20 text-warning px-1.5 py-0.5 rounded">
                       {processedCount}/{data.pages.length}
@@ -999,7 +1050,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
                     {data.exportMode === 'background' && (
                       <div className="text-sm text-info/80 flex items-center gap-1 mt-2">
                         <Zap className="w-4 h-4" />
-                        使用 Gemini 检测文字 + 自适应背景修复（无需下载模型）
+                        使用 Gemini 检测文字 + 样式提取 + 背景修复，生成可编辑文本框
                       </div>
                     )}
                   </div>
@@ -1250,7 +1301,7 @@ export const PPTAssemblerNode = memo(({ id, data, selected }: NodeProps<PPTAssem
                 {data.exportMode === 'background' && (
                   canDownload
                     ? '所有页面处理完成，可以下载'
-                    : '请先完成背景处理'
+                    : '请先完成可编辑处理'
                 )}
               </div>
               <div className="flex items-center gap-2">

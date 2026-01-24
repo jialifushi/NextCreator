@@ -11,9 +11,12 @@ export interface PPTPageData {
   image: string;  // base64 图片 - 完整的 PPT 页面图片（用于导出）
   thumbnail?: string;  // 缩略图 base64（JPEG 格式，用于画布预览）
 
-  // 仅背景模式处理后的数据
+  // 可编辑模式处理后的数据
   processedBackground?: string;  // 处理后的背景图 base64（去除文字后）
   processedThumbnail?: string;   // 处理后的背景图缩略图
+  processedTextBoxes?: TextBox[];  // 处理后的文本框（用于可编辑导出）
+  processedWidth?: number;  // 原图宽度（像素）
+  processedHeight?: number; // 原图高度（像素）
   // 处理状态：pending -> detecting -> inpainting -> completed/error
   processStatus?: 'pending' | 'detecting' | 'inpainting' | 'completed' | 'error';
   processError?: string;  // 处理错误信息
@@ -40,7 +43,7 @@ export interface PPTAssemblerNodeData {
   // === 可编辑导出功能 ===
   // 导出模式：
   // - image: 纯图片（原始图片直接嵌入）
-  // - background: 仅背景（去除文字后的背景图，用户自行添加文字）
+  // - background: 可编辑（背景 + 文本框）
   exportMode: "image" | "background";
 
   // 处理进度（当前处理页面索引和详细步骤）
@@ -55,5 +58,7 @@ export interface PPTAssemblerNodeData {
 export interface ProcessedPage {
   backgroundImage: string;  // 去除文字后的背景图 base64
   textBoxes: TextBox[];     // 检测到的文本框列表
+  sourceWidth?: number;     // 原图宽度（像素）
+  sourceHeight?: number;    // 原图高度（像素）
   originalPage?: PPTPageData;  // 原始页面数据（用于获取 script 等）
 }

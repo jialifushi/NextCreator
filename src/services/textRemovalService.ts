@@ -23,6 +23,8 @@ export interface TextBox {
   height: number;
   text: string;
   fontSize: number;
+  color?: string;
+  bold?: boolean;
 }
 
 /** 文本区域数据（用于两阶段处理） */
@@ -158,6 +160,9 @@ export interface PageProgressEvent {
   error?: string;
   backgroundImage?: string;
   regionsCount?: number;
+  textBoxes?: TextBox[];
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
 /** 批量处理完成事件 */

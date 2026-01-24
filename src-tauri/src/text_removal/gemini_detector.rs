@@ -41,6 +41,8 @@ const ROUND1_PROMPT: &str = r#"
 3. 边界框格式：[ymin, xmin, ymax, xmax]，坐标归一化到 0-1000 范围
 4. 边界框应该紧密包围文字，不要包含过多的背景区域
 5. 最后输出一个 JSON 格式的结果
+6. 不要漏掉非常小、模糊、残缺的文字或笔画；即使无法读出内容，也要标注区域
+7. 注意图标旁、箭头旁、角落、竖排/旋转的文字
 
 输出格式示例：
 ```json
@@ -132,6 +134,25 @@ struct StructuredResult {
     regions: Vec<TextRegion>,
 }
 
+/// 文字样式信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextStyleInfo {
+    /// 对应的区域索引（与传入 regions 顺序一致，0-based）
+    pub index: usize,
+    /// 颜色（#RRGGBB）
+    pub color_hex: String,
+    /// 字号（磅）
+    pub font_size: i32,
+    /// 是否粗体
+    pub is_bold: bool,
+}
+
+/// 样式结构化输出结果
+#[derive(Debug, Deserialize)]
+struct StructuredStyleResult {
+    styles: Vec<TextStyleInfo>,
+}
+
 /// 解析可能被 markdown 包裹的 JSON
 fn parse_json(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
@@ -194,6 +215,123 @@ pub async fn detect_text(
         regions,
         raw_response: round1_result.text,
     })
+}
+
+/// 提取文字样式信息（颜色、字号、粗细）
+pub async fn extract_text_styles(
+    image_base64: &str,
+    regions: &[TextRegion],
+    config: &GeminiConfig,
+) -> Result<Vec<TextStyleInfo>, String> {
+    if regions.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let client = Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let url = format!(
+        "{}/v1beta/models/{}:generateContent?key={}",
+        config.base_url.trim_end_matches('/'),
+        config.model,
+        config.api_key
+    );
+
+    let mut list_lines = Vec::new();
+    for (i, r) in regions.iter().enumerate() {
+        let label: String = r.label.chars().take(40).collect();
+        list_lines.push(format!("{}. {}", i, label));
+    }
+    let list_text = list_lines.join("\n");
+
+    let prompt = format!(r##"
+分析这张图片中以下文字区域的样式信息：
+
+{}
+
+请输出每个区域的：
+1. 颜色（十六进制，如 #FFFFFF / #333333）
+2. 估计字号（磅值）
+3. 是否粗体
+
+要求：
+- index 为区域序号（与上面列表一致，0-based）
+- 如果无法判断，请使用默认值：color_hex="#333333", font_size=24, is_bold=false
+"##, list_text);
+
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "styles": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "index": { "type": "integer" },
+                        "color_hex": { "type": "string" },
+                        "font_size": { "type": "integer" },
+                        "is_bold": { "type": "boolean" }
+                    },
+                    "required": ["index", "color_hex", "font_size", "is_bold"]
+                }
+            }
+        },
+        "required": ["styles"]
+    });
+
+    let request_body = serde_json::json!({
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {
+                    "inlineData": {
+                        "mimeType": "image/png",
+                        "data": image_base64
+                    }
+                }
+            ]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": schema
+        }
+    });
+
+    let response = client
+        .post(url)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("样式提取请求失败: {}", e))?;
+
+    let status = response.status();
+    let response_text = response.text().await.map_err(|e| format!("读取响应失败: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("API 返回错误 ({}): {}", status, response_text));
+    }
+
+    let gemini_response: GeminiResponse = serde_json::from_str(&response_text)
+        .map_err(|e| format!("解析响应失败: {} - {}", e, response_text))?;
+
+    if let Some(error) = gemini_response.error {
+        return Err(format!("Gemini API 错误: {}", error.message));
+    }
+
+    let text = gemini_response.candidates
+        .as_ref()
+        .and_then(|c| c.first())
+        .and_then(|c| c.content.as_ref())
+        .and_then(|c| c.parts.first())
+        .and_then(|p| p.text.as_ref())
+        .ok_or("样式提取无响应")?;
+
+    let result: StructuredStyleResult = serde_json::from_str(text)
+        .map_err(|e| format!("解析样式结果失败: {} - {}", e, text))?;
+
+    Ok(result.styles)
 }
 
 /// 第一轮调用结果
@@ -336,6 +474,7 @@ async fn normalize_detection_result(
 3. 如果有 mask 或 polygon 数据，转换为 polygon 格式（多边形顶点列表 [[y1,x1], [y2,x2], ...]）
 4. 所有坐标保持 0-1000 的归一化范围
 5. 确保边界框紧密包围文字区域
+6. 若有极小或难以识别的字形残留，也需要保留其区域
 "#, raw_result);
 
     // JSON Schema

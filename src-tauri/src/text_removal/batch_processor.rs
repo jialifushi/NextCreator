@@ -1,11 +1,12 @@
 // 批量处理服务
 // 并发 Gemini 检测 + 自适应背景修复
 
-use super::gemini_detector::{detect_text, GeminiConfig, TextRegion};
+use super::gemini_detector::{detect_text, extract_text_styles, GeminiConfig, TextRegion};
+use super::service::{build_text_boxes, TextBoxData};
 use super::adaptive_inpainter::adaptive_inpaint;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use image::{DynamicImage, ImageFormat};
+use image::{DynamicImage, ImageFormat, RgbImage};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -50,6 +51,12 @@ pub struct PageProgressEvent {
     pub error: Option<String>,
     /// 处理后的背景图 base64（仅在 completed 状态时有值）
     pub background_image: Option<String>,
+    /// 生成的文本框（仅在 completed 状态时有值）
+    pub text_boxes: Option<Vec<TextBoxData>>,
+    /// 原始图片宽度（仅在 completed 状态时有值）
+    pub image_width: Option<u32>,
+    /// 原始图片高度（仅在 completed 状态时有值）
+    pub image_height: Option<u32>,
     /// 检测到的文字区域数量
     pub regions_count: Option<usize>,
 }
@@ -151,6 +158,9 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                     status: "detecting".to_string(),
                     error: None,
                     background_image: None,
+                    text_boxes: None,
+                    image_width: None,
+                    image_height: None,
                     regions_count: None,
                 },
             );
@@ -168,6 +178,53 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                         result.regions.len()
                     );
 
+                    // 解码图片（用于尺寸/样式/文本框计算）
+                    let image_bytes = match STANDARD.decode(&page.image_data) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            error_for_detect.fetch_add(1, Ordering::SeqCst);
+                            let _ = app_for_detect.emit(
+                                "batch-page-progress",
+                                PageProgressEvent {
+                                    page_index,
+                                    status: "error".to_string(),
+                                    error: Some(format!("Base64 解码失败: {}", e)),
+                                    background_image: None,
+                                    text_boxes: None,
+                                    image_width: None,
+                                    image_height: None,
+                                    regions_count: None,
+                                },
+                            );
+                            return;
+                        }
+                    };
+
+                    let img = match image::load_from_memory(&image_bytes) {
+                        Ok(i) => i,
+                        Err(e) => {
+                            error_for_detect.fetch_add(1, Ordering::SeqCst);
+                            let _ = app_for_detect.emit(
+                                "batch-page-progress",
+                                PageProgressEvent {
+                                    page_index,
+                                    status: "error".to_string(),
+                                    error: Some(format!("图片解析失败: {}", e)),
+                                    background_image: None,
+                                    text_boxes: None,
+                                    image_width: None,
+                                    image_height: None,
+                                    regions_count: None,
+                                },
+                            );
+                            return;
+                        }
+                    };
+
+                    let image_width = img.width();
+                    let image_height = img.height();
+                    let rgb_image = img.to_rgb8();
+
                     // 如果没有检测到文字，直接完成
                     if result.regions.is_empty() {
                         success_for_detect.fetch_add(1, Ordering::SeqCst);
@@ -178,11 +235,30 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                                 status: "completed".to_string(),
                                 error: None,
                                 background_image: Some(page.image_data.clone()),
+                                text_boxes: Some(vec![]),
+                                image_width: Some(image_width),
+                                image_height: Some(image_height),
                                 regions_count: Some(0),
                             },
                         );
                         return;
                     }
+
+                    let styles = match extract_text_styles(&page.image_data, &result.regions, &gemini_cfg).await {
+                        Ok(s) => s,
+                        Err(e) => {
+                            println!("[Rust] 样式提取失败，使用默认样式: {}", e);
+                            vec![]
+                        }
+                    };
+
+                    let text_boxes = build_text_boxes(
+                        &result.regions,
+                        &styles,
+                        image_width,
+                        image_height,
+                        &rgb_image,
+                    );
 
                     // 发送 inpainting 状态
                     let _ = app_for_detect.emit(
@@ -192,6 +268,9 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                             status: "inpainting".to_string(),
                             error: None,
                             background_image: None,
+                            text_boxes: None,
+                            image_width: None,
+                            image_height: None,
                             regions_count: Some(result.regions.len()),
                         },
                     );
@@ -200,7 +279,7 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                         return;
                     }
 
-                    match process_inpaint(&page.image_data, &result.regions).await {
+                    match process_inpaint(rgb_image, &result.regions).await {
                         Ok(bg_image) => {
                             success_for_detect.fetch_add(1, Ordering::SeqCst);
                             let _ = app_for_detect.emit(
@@ -210,6 +289,9 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                                     status: "completed".to_string(),
                                     error: None,
                                     background_image: Some(bg_image),
+                                    text_boxes: Some(text_boxes),
+                                    image_width: Some(image_width),
+                                    image_height: Some(image_height),
                                     regions_count: Some(result.regions.len()),
                                 },
                             );
@@ -223,6 +305,9 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                                     status: "error".to_string(),
                                     error: Some(e),
                                     background_image: None,
+                                    text_boxes: None,
+                                    image_width: None,
+                                    image_height: None,
                                     regions_count: None,
                                 },
                             );
@@ -238,6 +323,9 @@ pub async fn process_pages_batch(app: AppHandle, params: BatchProcessParams) -> 
                             status: "error".to_string(),
                             error: Some(format!("文字检测失败: {}", e)),
                             background_image: None,
+                            text_boxes: None,
+                            image_width: None,
+                            image_height: None,
                             regions_count: None,
                         },
                     );
@@ -299,18 +387,9 @@ pub async fn stop_batch_processing() -> BatchProcessResult {
 
 /// 执行单页修复
 async fn process_inpaint(
-    image_data: &str,
+    rgb_image: RgbImage,
     regions: &[TextRegion],
 ) -> Result<String, String> {
-    // 解码图片
-    let image_bytes = STANDARD
-        .decode(image_data)
-        .map_err(|e| format!("Base64 解码失败: {}", e))?;
-
-    let img = image::load_from_memory(&image_bytes)
-        .map_err(|e| format!("图片解析失败: {}", e))?;
-
-    let rgb_image = img.to_rgb8();
     let regions_vec = regions.to_vec();
     let inpainted = tokio::task::spawn_blocking(move || {
         adaptive_inpaint(&rgb_image, &regions_vec)

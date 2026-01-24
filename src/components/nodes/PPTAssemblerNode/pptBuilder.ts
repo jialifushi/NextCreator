@@ -153,16 +153,17 @@ export async function buildEditablePPT(options: BuildEditablePPTOptions): Promis
     // 需要将像素坐标转换为幻灯片坐标
     // 假设原图尺寸与幻灯片比例一致
     if (page.textBoxes && page.textBoxes.length > 0) {
-      // 获取原图尺寸（从 base64 解析或使用默认值）
-      // 这里假设 16:9 为 1920x1080, 4:3 为 1920x1440
-      const imgWidth = aspectRatio === "16:9" ? 1920 : 1920;
-      const imgHeight = aspectRatio === "16:9" ? 1080 : 1440;
+      // 使用实际图片尺寸进行缩放，缺省则回退到常用尺寸
+      const imgWidth = page.sourceWidth || (aspectRatio === "16:9" ? 1920 : 1920);
+      const imgHeight = page.sourceHeight || (aspectRatio === "16:9" ? 1080 : 1440);
 
       // 计算缩放比例
       const scaleX = slideWidth / imgWidth;
       const scaleY = slideHeight / imgHeight;
 
       for (const box of page.textBoxes) {
+        if (!box.text || box.width <= 0 || box.height <= 0) continue;
+
         // 转换坐标
         const x = box.x * scaleX;
         const y = box.y * scaleY;
@@ -181,10 +182,11 @@ export async function buildEditablePPT(options: BuildEditablePPTOptions): Promis
           h,
           fontSize: Math.max(8, Math.min(fontSizePt, 72)), // 限制字号范围
           fontFace: "微软雅黑",
-          color: "000000",
-          valign: "middle",
+          color: (box.color || "333333").replace("#", ""),
+          bold: !!box.bold,
+          valign: "top",
           margin: 0,
-          wrap: false,
+          wrap: true,
         });
       }
     }

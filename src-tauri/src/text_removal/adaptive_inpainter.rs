@@ -29,15 +29,25 @@ pub fn adaptive_inpaint(
         }
 
         let area = count_mask_pixels(&base_mask);
+        let (_mask_min_x, _mask_max_x, mask_min_y, mask_max_y) = match mask_bbox(&base_mask) {
+            Some(v) => v,
+            None => continue,
+        };
+        let mask_height = mask_max_y.saturating_sub(mask_min_y) + 1;
+
         let border_samples = collect_border_samples(&result, &base_mask, 8);
         let strategy = analyze_background(&border_samples);
 
-        let size_dilate = if area < 1000 {
-            2
-        } else if area < 5000 {
+        let size_dilate = if mask_height <= 18 {
+            4
+        } else if mask_height <= 28 {
             3
+        } else if area < 1000 {
+            3
+        } else if area < 5000 {
+            4
         } else {
-            5
+            6
         };
         let dilate_px = size_dilate;
         let region_mask = if dilate_px > 0 {
